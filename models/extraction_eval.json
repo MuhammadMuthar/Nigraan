@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-10-09T16:50:30+00:00",
+  "summary": {
+    "field_accuracy": 1.0,
+    "engine": "pdf_text_regex (40)",
+    "files": 40,
+    "line_items_exact": 1.0
+  },
+  "per_field": {
+    "vendor_name": 1.0,
+    "ntn": 1.0,
+    "strn": 1.0,
+    "invoice_no": 1.0,
+    "invoice_date": 1.0,
+    "due_date": 1.0,
+    "subtotal": 1.0,
+    "tax": 1.0,
+    "total": 1.0,
+    "iban": 1.0
+  },
+  "misses": [],
+  "note": "Ground truth = the generator's invoice data. Gemini results appear here only when GEMINI_API_KEY is set."
+}

@@ -25,6 +25,10 @@ def case_row(c: Case, users: dict[int, str]) -> dict:
 
 
 def case_detail(db: Session, case: Case, user: User) -> dict:
+    audit(db, user, "view_case", "case", case.id)
+    db.add(CaseEvent(case_id=case.id, at=utcnow(), user_id=user.id, kind="viewed", detail_json={}))
+    db.commit()
+    db.refresh(case)
     users = dict(db.execute(select(User.id, User.name)).all())
     p: Payment = case.payment
     scores = db.execute(select(RiskScore).where(RiskScore.payment_id == p.id).order_by(RiskScore.id)).scalars().all()
@@ -43,7 +47,7 @@ def case_detail(db: Session, case: Case, user: User) -> dict:
                     "source": inv.source, "file_name": inv.file_name,
                     "lines": [{"description": l.description, "qty": l.qty, "unit_price": int(l.unit_price),
                                "amount": int(l.amount)} for l in inv.lines]},
-        "vendor": _vendor_info(p.vendor),
+        "vendor_info": _vendor_info(p.vendor),
         "score": None if s is None else {
             "score": s.score, "decision": s.decision, "reasons": s.reasons_json, "engines": s.engine_scores_json,
             "evidence": s.evidence_json, "trace": s.trace_json, "model_version": s.model_version,
@@ -55,9 +59,6 @@ def case_detail(db: Session, case: Case, user: User) -> dict:
                    for e in case.events],
         "verification": verification_step(case, s),
     })
-    audit(db, user, "view_case", "case", case.id)
-    db.add(CaseEvent(case_id=case.id, at=utcnow(), user_id=user.id, kind="viewed", detail_json={}))
-    db.commit()
     return out
 
 

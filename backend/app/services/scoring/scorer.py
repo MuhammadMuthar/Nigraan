@@ -159,10 +159,11 @@ class Scorer:
                 "prob": round(dup.prob, 3), "hard": dup.hard, "features": {k: round(v, 3) for k, v in dup.features.items()},
                 "this": _inv_summary(ctx, inv_id, this), "match": _inv_summary(ctx, dup.match_invoice_id, m),
             }
-            if dup.prob >= 0.5 and not dup.hard:
+            if dup.prob >= 0.25 and not dup.hard:
                 f = dup.features
+                lead = "Looks like a duplicate of" if dup.prob >= 0.5 else "Similar to earlier invoice"
                 reasons.append({"engine": "duplicate", "weight": contributions["duplicate"], "priority": 1, "text": (
-                    f"Looks like a duplicate of {m['invoice_no']} ({pd.Timestamp(m['invoice_date']):%d %b}): "
+                    f"{lead} {m['invoice_no']} ({pd.Timestamp(m['invoice_date']):%d %b}): "
                     + ("same number once zeros/dashes are removed" if f["num_exact"] else f"number {f['num_sim']:.0%} similar")
                     + f", {f['date_gap']:.0f} days apart, amount differs {f['amount_diff_pct']:.1f}%")})
         if gr.signal >= 0.3:
@@ -181,16 +182,16 @@ class Scorer:
         for r in rr.info:
             reasons.append({"engine": "info", "weight": 0.0, "text": r, "priority": 9})
 
-        # ---- fraud type guess
+        # ---- suspected pattern: explicit evidence first, then the model's strongest feature family
         ftype = None
         if decision != "allow":
-            if any(h.code == "DUP_EXACT" for h in rr.hits) or contributions["duplicate"] >= max(contributions.values()):
-                ftype = "F1" if dup.prob >= 0.5 else None
-            if ftype is None and any(h.code == "SPLIT_PAYMENT" for h in rr.hits):
+            if any(h.code == "DUP_EXACT" for h in rr.hits) or dup.prob >= 0.5:
+                ftype = "F1"
+            elif any(h.code == "SPLIT_PAYMENT" for h in rr.hits):
                 ftype = "F5"
-            if ftype is None and gr.signal >= 0.7 and contributions["graph"] >= 0.5 * contributions["risk_model"]:
+            elif gr.signal >= 0.7:
                 ftype = "F3"
-            if ftype is None:
+            else:
                 agg: dict[str, float] = {}
                 for name, c in contribs.items():
                     t = FEATURE_TYPE.get(name)

@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* Nigraan design tokens: neutral palette, one accent (teal), semantic traffic lights. */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-allow: var(--allow);
+  --color-allow-soft: var(--allow-soft);
+  --color-review: var(--review);
+  --color-review-soft: var(--review-soft);
+  --color-blocked: var(--blocked);
+  --color-blocked-soft: var(--blocked-soft);
+
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+}
+
+:root {
+  --background: #f7f7f8;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --muted: #f1f1f3;
+  --muted-foreground: #63636e;
+  --border: #e4e4e7;
+  --ring: #0f766e;
+  --accent: #0f766e;
+  --accent-foreground: #ffffff;
+  --accent-soft: #e6f4f2;
+
+  --allow: #15803d;
+  --allow-soft: #e9f7ee;
+  --review: #b45309;
+  --review-soft: #fdf3e2;
+  --blocked: #b91c1c;
+  --blocked-soft: #fdecec;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv11", "ss01";
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Basis patterns on the cash chart: facts solid, estimates lighter, assumptions hatched */
+.hatch {
+  background-image: repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 6px);
+}
+
+@keyframes fill-in {
+  from { background-color: var(--accent-soft); }
+  to { background-color: transparent; }
+}
+.fill-in {
+  animation: fill-in 1.2s ease-out;
+}

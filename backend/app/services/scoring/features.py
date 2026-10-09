@@ -25,14 +25,14 @@ FEATURES = [
     "changer_edit_share", "change_unverified", "vendor_age_days", "vendor_prior_invoices", "is_round_amount",
     "vendor_round_share", "no_sales_tax", "same_payee_48h", "same_payee_48h_vs_limit", "limit_gap",
     "creator_can_approve", "entry_hour", "is_night", "off_day", "vague_line_share", "line_count",
-    "days_receipt_to_payment", "days_to_due",
+    "days_since_invoice_date", "days_to_due",
 ]
 
 # Isolation Forest sees a compact, imputed subset.
 ISO_FEATURES = [
     "amount_vs_vendor_median", "unit_price_vs_median_max", "days_since_bank_change", "first_payment_to_account",
     "vendor_age_days", "same_payee_48h", "limit_gap", "is_night", "off_day", "vague_line_share",
-    "is_round_amount", "days_receipt_to_payment", "changer_edit_share", "creator_can_approve",
+    "is_round_amount", "days_since_invoice_date", "changer_edit_share", "creator_can_approve",
 ]
 ISO_IMPUTE = {"amount_vs_vendor_median": 1.0, "unit_price_vs_median_max": 1.0, "changer_edit_share": 0.5}
 
@@ -211,7 +211,8 @@ class FeatureContext:
         lines = self.lines_by_invoice.get(inv_id, [])
         f["line_count"] = float(len(lines))
         f["vague_line_share"] = (sum(1 for _, _, d in lines if VAGUE_RE.search(d)) / len(lines)) if lines else 0.0
-        f["days_receipt_to_payment"] = (t - _ns(inv["received_at"])) / DAY_NS
+        # document date, not system entry time: an upload scored right away must not look "rushed"
+        f["days_since_invoice_date"] = float((local.date() - pd.Timestamp(inv["invoice_date"]).date()).days)
         f["days_to_due"] = float((pd.Timestamp(inv["due_date"]).date() - local.date()).days)
         return f
 
@@ -228,5 +229,5 @@ def iso_matrix(X: pd.DataFrame) -> np.ndarray:
     Z["vendor_age_days"] = np.log1p(Z["vendor_age_days"])
     Z["amount_vs_vendor_median"] = np.log(np.clip(Z["amount_vs_vendor_median"], 0.05, 50))
     Z["unit_price_vs_median_max"] = np.log(np.clip(Z["unit_price_vs_median_max"], 0.05, 50))
-    Z["days_receipt_to_payment"] = np.log1p(np.clip(Z["days_receipt_to_payment"], 0, None))
+    Z["days_since_invoice_date"] = np.log1p(np.clip(Z["days_since_invoice_date"], 0, None))
     return Z.values

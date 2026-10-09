@@ -187,12 +187,19 @@ def _upload_samples(world, out_dir: Path) -> None:
     # 1) a vendor re-sends an invoice that is already in this week's run (exact duplicate -> hard rule)
     dup = dict(legit[3])
     render_invoice(up / f"resent_{dup['file']}", dup, dup["vendor_id"] % 3)
-    # 2) a clean next invoice from a regular vendor
+    # 2) a genuinely new invoice from a regular vendor: new number, later date, different quantities
     clean = dict(legit[7])
-    clean["invoice_no"] = clean["invoice_no"] + "-1" if not clean["invoice_no"][-1].isdigit() else \
-        clean["invoice_no"][:-1] + str((int(clean["invoice_no"][-1]) + 1) % 10)
-    clean["invoice_date"] = clean["invoice_date"] + timedelta(days=4)
-    clean["due_date"] = clean["due_date"] + timedelta(days=4)
+    lines = []
+    for l in clean["lines"]:
+        q = l["qty"] + 3
+        lines.append(dict(l, qty=q, amount=int(l["unit_price"] * q)))
+    sub = sum(l["amount"] for l in lines)
+    tax = int(round(sub * (clean["tax"] / clean["subtotal"] if clean["subtotal"] else 0) / 100)) * 100
+    import re as _re
+    m = _re.match(r"^(.*?)(\d+)$", clean["invoice_no"])
+    no = f"{m.group(1)}{int(m.group(2)) + 9}" if m else clean["invoice_no"] + "-2"
+    clean.update(lines=lines, subtotal=sub, tax=tax, total=sub + tax, invoice_no=no,
+                 invoice_date=clean["invoice_date"] + timedelta(days=12), due_date=clean["due_date"] + timedelta(days=12))
     render_invoice(up / f"new_{clean['vendor_name'].split()[0].lower()}_invoice.pdf", clean, clean["vendor_id"] % 3)
     truth = {f"resent_{dup['file']}": "exact duplicate of a line already in this run",
              f"new_{clean['vendor_name'].split()[0].lower()}_invoice.pdf": "clean invoice"}

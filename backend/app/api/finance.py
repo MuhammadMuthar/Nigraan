@@ -385,6 +385,34 @@ def demo_load_week(db: Session = Depends(get_db), user: User = Depends(current_u
     return load_week(db, sana)
 
 
+@router.get("/demo/samples", tags=["demo"])
+def demo_samples(user: User = Depends(current_user)):
+    """Sample invoice files judges can upload without having them locally."""
+    d = get_settings().demo_week_dir
+    out = []
+    up = d / "upload_samples"
+    if up.exists():
+        for f in sorted(up.glob("*.pdf")):
+            out.append({"name": f.name, "group": "upload_samples",
+                        "hint": "resent invoice (already in this run)" if f.name.startswith("resent_") else "new invoice"})
+    pdfs = sorted((d / "pdfs").glob("*.pdf")) if (d / "pdfs").exists() else []
+    for f in pdfs[:6]:
+        out.append({"name": f.name, "group": "pdfs", "hint": "demo-week invoice"})
+    return out
+
+
+@router.get("/demo/samples/{group}/{name}", tags=["demo"])
+def demo_sample_file(group: str, name: str, user: User = Depends(current_user)):
+    from fastapi.responses import FileResponse
+
+    if group not in ("upload_samples", "pdfs") or "/" in name or ".." in name or not name.endswith(".pdf"):
+        _404("sample")
+    path = get_settings().demo_week_dir / group / name
+    if not path.exists():
+        _404("sample")
+    return FileResponse(path, media_type="application/pdf", filename=name)
+
+
 @router.get("/demo/status", tags=["demo"])
 def demo_status(db: Session = Depends(get_db)):
     s = get_settings()

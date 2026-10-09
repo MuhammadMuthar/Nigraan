@@ -67,10 +67,10 @@ def feature_reason(name: str, v: float, f: dict) -> str | None:
         return "Entered on a Sunday or public holiday" if v else None
     if name == "vague_line_share":
         return "Vague line items (e.g. 'consultancy services')" if v >= 0.5 else None
-    if name == "days_receipt_to_payment":
-        if v < 0.05:
-            return "Paid within an hour of the invoice being entered (no time to verify)"
-        return f"Payment prepared {v * 24:.0f} hours after the invoice arrived" if v < 1 else None
+    if name == "days_since_invoice_date":
+        if v <= 3:
+            return f"Paid {max(0, round(v))} day{'s' if round(v) != 1 else ''} after the invoice date (no time to verify)"
+        return None
     if name == "days_to_due":
         return f"Paid {v:.0f} days before it is due" if v >= 7 else None
     if name == "amount_log":
@@ -91,7 +91,7 @@ LABEL = {
     "limit_gap": "Distance below approval limit", "creator_can_approve": "Creator can approve",
     "entry_hour": "Entry hour", "is_night": "Entered at night", "off_day": "Entered on Sunday/holiday",
     "vague_line_share": "Vague line items", "line_count": "Number of lines",
-    "days_receipt_to_payment": "Days from invoice to payment", "days_to_due": "Days before due date",
+    "days_since_invoice_date": "Days since invoice date", "days_to_due": "Days before due date",
 }
 
 

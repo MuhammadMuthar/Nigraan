@@ -2,41 +2,41 @@
   "fusion": {
     "weights": {
       "risk_model": 0.5,
-      "anomaly": 0.2,
-      "duplicate": 0.25,
-      "graph": 0.25
+      "anomaly": 0.1,
+      "duplicate": 0.5,
+      "graph": 0.5
     },
-    "t_yellow": 0.1128,
-    "t_red": 0.3093,
+    "t_yellow": 0.0881,
+    "t_red": 0.2744,
     "val": {
       "recall": 1.0,
-      "recall_red": 0.9714285714285714,
+      "recall_red": 1.0,
       "far": 0.03996983408748114,
       "far_red": 0.004524886877828055,
-      "precision_red": 0.85,
+      "precision_red": 0.8536585365853658,
       "precision_alert": 0.3977272727272727,
-      "pr_auc": 0.9671634936976101
+      "pr_auc": 0.9734199543864017
     },
-    "source": "tuned on out-of-time folds, months 7-8 and 9-10 (grid search: max recall s.t. false alarms <= 4%, red false alarms <= 0.5%)",
+    "source": "tuned on out-of-time folds, months 7-8 and 9-10 (grid search: max recall s.t. false alarms <= 4%, red false alarms <= 0.5%, and a 0.9 duplicate or graph signal alone reaches red)",
     "prompt_defaults_val": {
-      "t_yellow": 0.10112394801812588,
-      "t_red": 0.2655050656794655,
+      "t_yellow": 0.10785938290637076,
+      "t_red": 0.3137250932961981,
       "recall": 1.0,
       "recall_red": 0.9714285714285714,
       "far": 0.03996983408748114,
       "far_red": 0.004524886877828055,
       "precision_red": 0.85,
       "precision_alert": 0.3977272727272727,
-      "pr_auc": 0.9673230729570839
+      "pr_auc": 0.9622553831233649
     }
   },
   "iso_q": [
-    0.4918708331625144,
-    0.603160210830592
+    0.4933872911523919,
+    0.6024265783124721
   ],
   "xgb_params": {
     "max_depth": 4,
-    "rounds": 250,
+    "rounds": 500,
     "spw": "sqrt"
   },
   "features": [
@@ -65,7 +65,7 @@
     "off_day",
     "vague_line_share",
     "line_count",
-    "days_receipt_to_payment",
+    "days_since_invoice_date",
     "days_to_due"
   ],
   "n_pos": 83,
@@ -73,5 +73,5 @@
   "seed": 42,
   "trained_on": "payments in months 1-10 with audited labels; fusion tuned on out-of-time folds (months 7-8, 9-10)",
   "version": "v1.0-s42",
-  "trained_at": "2026-10-09T16:27:21+00:00"
+  "trained_at": "2026-10-09T16:49:32+00:00"
 }

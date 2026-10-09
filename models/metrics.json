@@ -1,47 +1,47 @@
 {
-  "generated_at": "2026-10-09T16:24:41+00:00",
+  "generated_at": "2026-10-09T16:50:46+00:00",
   "model_version": "v1.0-s42",
   "seed": 42,
   "test_months": "11-12",
   "test_period": "Aug-Sep 2026 (months 11-12); training used Oct 2025-Jul 2026 only",
   "fraud": {
-    "n_payments": 665,
-    "n_fraud": 13,
-    "ms_per_payment": 8.5,
+    "n_payments": 638,
+    "n_fraud": 22,
+    "ms_per_payment": 8.8,
     "nigraan": {
       "recall": 1.0,
-      "recall_red": 0.9230769230769231,
-      "precision_alert": 0.29545454545454547,
-      "precision_red": 0.8,
-      "false_alarm_rate": 0.04754601226993865,
-      "false_alarm_rate_red": 0.004601226993865031,
-      "pr_auc": 0.9685314685314685,
+      "recall_red": 0.9545454545454546,
+      "precision_alert": 0.5,
+      "precision_red": 0.9545454545454546,
+      "false_alarm_rate": 0.03571428571428571,
+      "false_alarm_rate_red": 0.0016233766233766235,
+      "pr_auc": 0.9930069930069931,
       "alerts": 44,
-      "reds": 15,
-      "rupees_fraud": 270265200,
-      "rupees_protected_red": 254231800,
-      "rupees_flagged": 270265200,
+      "reds": 22,
+      "rupees_fraud": 542610000,
+      "rupees_protected_red": 535161100,
+      "rupees_flagged": 542610000,
       "per_type": {
         "F1": {
           "name": "Duplicate invoice",
-          "n": 4,
-          "caught": 4,
+          "n": 6,
+          "caught": 6,
           "recall": 1.0,
-          "red": 3
+          "red": 6
         },
         "F2": {
           "name": "Bank-detail change",
-          "n": 1,
-          "caught": 1,
+          "n": 4,
+          "caught": 4,
           "recall": 1.0,
-          "red": 1
+          "red": 4
         },
         "F3": {
           "name": "Shell vendor",
-          "n": 1,
-          "caught": 1,
+          "n": 3,
+          "caught": 3,
           "recall": 1.0,
-          "red": 1
+          "red": 3
         },
         "F4": {
           "name": "Inflated price",
@@ -52,51 +52,51 @@
         },
         "F5": {
           "name": "Split payment",
-          "n": 2,
-          "caught": 2,
+          "n": 4,
+          "caught": 4,
           "recall": 1.0,
-          "red": 2
+          "red": 4
         },
         "F7": {
           "name": "Out-of-hours self-approval",
           "n": 2,
           "caught": 2,
           "recall": 1.0,
-          "red": 2
+          "red": 1
         }
       }
     },
     "baseline_rules_only": {
-      "recall": 0.15384615384615385,
-      "recall_red": 0.15384615384615385,
-      "precision_alert": 0.06666666666666667,
-      "precision_red": 0.06666666666666667,
-      "false_alarm_rate": 0.04294478527607362,
-      "false_alarm_rate_red": 0.04294478527607362,
-      "pr_auc": 0.026797763639868903,
-      "alerts": 30,
-      "reds": 30,
-      "rupees_fraud": 270265200,
-      "rupees_protected_red": 35536000,
-      "rupees_flagged": 35536000,
+      "recall": 0.22727272727272727,
+      "recall_red": 0.22727272727272727,
+      "precision_alert": 0.2,
+      "precision_red": 0.2,
+      "false_alarm_rate": 0.032467532467532464,
+      "false_alarm_rate_red": 0.032467532467532464,
+      "pr_auc": 0.07210031347962383,
+      "alerts": 25,
+      "reds": 25,
+      "rupees_fraud": 542610000,
+      "rupees_protected_red": 126485200,
+      "rupees_flagged": 126485200,
       "per_type": {
         "F1": {
           "name": "Duplicate invoice",
-          "n": 4,
-          "caught": 2,
-          "recall": 0.5,
-          "red": 2
+          "n": 6,
+          "caught": 4,
+          "recall": 0.6666666666666666,
+          "red": 4
         },
         "F2": {
           "name": "Bank-detail change",
-          "n": 1,
+          "n": 4,
           "caught": 0,
           "recall": 0.0,
           "red": 0
         },
         "F3": {
           "name": "Shell vendor",
-          "n": 1,
+          "n": 3,
           "caught": 0,
           "recall": 0.0,
           "red": 0
@@ -104,13 +104,13 @@
         "F4": {
           "name": "Inflated price",
           "n": 3,
-          "caught": 0,
-          "recall": 0.0,
-          "red": 0
+          "caught": 1,
+          "recall": 0.3333333333333333,
+          "red": 1
         },
         "F5": {
           "name": "Split payment",
-          "n": 2,
+          "n": 4,
           "caught": 0,
           "recall": 0.0,
           "red": 0
@@ -126,161 +126,161 @@
     },
     "ablation": {
       "without_risk_model": {
-        "recall": 0.7692307692307693,
-        "false_alarm_rate": 0.03680981595092025
+        "recall": 0.6818181818181818,
+        "false_alarm_rate": 0.016233766233766232
       },
       "without_anomaly": {
         "recall": 1.0,
-        "false_alarm_rate": 0.023006134969325152
+        "false_alarm_rate": 0.01948051948051948
       },
       "without_duplicate": {
-        "recall": 0.9230769230769231,
-        "false_alarm_rate": 0.03987730061349693
+        "recall": 0.9090909090909091,
+        "false_alarm_rate": 0.032467532467532464
       },
       "without_graph": {
         "recall": 1.0,
-        "false_alarm_rate": 0.04294478527607362
+        "false_alarm_rate": 0.02922077922077922
       }
     }
   },
   "fusion": {
     "weights": {
-      "risk_model": 0.75,
+      "risk_model": 0.5,
       "anomaly": 0.1,
-      "duplicate": 0.25,
-      "graph": 0.25
+      "duplicate": 0.5,
+      "graph": 0.5
     },
-    "t_yellow": 0.0586,
-    "t_red": 0.3445,
-    "source": "tuned on out-of-time folds, months 7-8 and 9-10 (grid search: max recall s.t. false alarms <= 4%, red false alarms <= 0.5%)"
+    "t_yellow": 0.0881,
+    "t_red": 0.2744,
+    "source": "tuned on out-of-time folds, months 7-8 and 9-10 (grid search: max recall s.t. false alarms <= 4%, red false alarms <= 0.5%, and a 0.9 duplicate or graph signal alone reaches red)"
   },
   "fusion_validation": {
-    "recall": 0.9787234042553191,
-    "recall_red": 0.8723404255319149,
-    "far": 0.03971631205673759,
-    "far_red": 0.004964539007092199,
-    "precision_red": 0.8541666666666666,
-    "precision_alert": 0.45098039215686275,
-    "pr_auc": 0.9397564451635019
+    "recall": 1.0,
+    "recall_red": 1.0,
+    "far": 0.03996983408748114,
+    "far_red": 0.004524886877828055,
+    "precision_red": 0.8536585365853658,
+    "precision_alert": 0.3977272727272727,
+    "pr_auc": 0.9734199543864017
   },
   "fusion_prompt_defaults_validation": {
-    "t_yellow": 0.0889649698607064,
-    "t_red": 0.20674374861812592,
-    "recall": 0.9361702127659575,
-    "recall_red": 0.8936170212765957,
-    "far": 0.03971631205673759,
-    "far_red": 0.004964539007092199,
-    "precision_red": 0.8571428571428571,
-    "precision_alert": 0.44,
-    "pr_auc": 0.8644364811533647
+    "t_yellow": 0.10785938290637076,
+    "t_red": 0.3137250932961981,
+    "recall": 1.0,
+    "recall_red": 0.9714285714285714,
+    "far": 0.03996983408748114,
+    "far_red": 0.004524886877828055,
+    "precision_red": 0.85,
+    "precision_alert": 0.3977272727272727,
+    "pr_auc": 0.9622553831233649
   },
   "late_payment": {
-    "n_test": 355,
-    "late_rate_test": 0.48732394366197185,
+    "n_test": 396,
+    "late_rate_test": 0.5656565656565656,
     "models": {
       "baseline": {
-        "pr_auc": 0.48732394366197185,
+        "pr_auc": 0.5656565656565656,
         "roc_auc": 0.5,
-        "brier": 0.250446835945249,
-        "precision_top20": 0.4507042253521127,
-        "recall_top20": 0.18497109826589594,
-        "n": 355,
-        "late_rate": 0.48732394366197185
+        "brier": 0.250303280685008,
+        "precision_top20": 0.569620253164557,
+        "recall_top20": 0.20089285714285715,
+        "n": 396,
+        "late_rate": 0.5656565656565656
       },
       "lr": {
-        "pr_auc": 0.8071832457709939,
-        "roc_auc": 0.8094708759448644,
-        "brier": 0.16369690017731306,
-        "precision_top20": 0.9014084507042254,
-        "recall_top20": 0.3699421965317919,
-        "n": 355,
-        "late_rate": 0.48732394366197185
+        "pr_auc": 0.8940175601521194,
+        "roc_auc": 0.8519518272425249,
+        "brier": 0.1540287520596263,
+        "precision_top20": 0.9620253164556962,
+        "recall_top20": 0.3392857142857143,
+        "n": 396,
+        "late_rate": 0.5656565656565656
       },
       "xgb": {
-        "pr_auc": 0.8157468760753949,
-        "roc_auc": 0.8130280124499777,
-        "brier": 0.15863387286663055,
-        "precision_top20": 0.9154929577464789,
-        "recall_top20": 0.37572254335260113,
-        "n": 355,
-        "late_rate": 0.48732394366197185
+        "pr_auc": 0.9106061945915392,
+        "roc_auc": 0.8648774916943521,
+        "brier": 0.13659720122814178,
+        "precision_top20": 0.9873417721518988,
+        "recall_top20": 0.3482142857142857,
+        "n": 396,
+        "late_rate": 0.5656565656565656
       }
     },
     "shipped": {
-      "kind": "lr",
-      "pr_auc": 0.7862399524317671,
-      "roc_auc": 0.8047386139871688,
-      "brier": 0.16563319566849177,
-      "precision_top20": 0.9014084507042254,
-      "recall_top20": 0.3699421965317919,
-      "n": 355,
-      "late_rate": 0.48732394366197185,
+      "kind": "xgb",
+      "pr_auc": 0.9105081176521331,
+      "roc_auc": 0.8635537790697676,
+      "brier": 0.14016953110694885,
+      "precision_top20": 0.9873417721518988,
+      "recall_top20": 0.3482142857142857,
+      "n": 396,
+      "late_rate": 0.5656565656565656,
       "reliability": [
         {
           "bin": "0.0-0.1",
-          "n": 10,
-          "mean_pred": 0.09237633067977938,
-          "observed": 0.2
+          "n": 14,
+          "mean_pred": 0.0823739767074585,
+          "observed": 0.07142857142857142
         },
         {
           "bin": "0.1-0.2",
-          "n": 124,
-          "mean_pred": 0.1419481992340782,
-          "observed": 0.24193548387096775
+          "n": 76,
+          "mean_pred": 0.1475478708744049,
+          "observed": 0.2894736842105263
         },
         {
           "bin": "0.2-0.3",
-          "n": 37,
-          "mean_pred": 0.24280823070405697,
-          "observed": 0.2972972972972973
+          "n": 52,
+          "mean_pred": 0.24042615294456482,
+          "observed": 0.17307692307692307
         },
         {
           "bin": "0.3-0.4",
-          "n": 28,
-          "mean_pred": 0.33723655078902925,
-          "observed": 0.32142857142857145
+          "n": 27,
+          "mean_pred": 0.342656672000885,
+          "observed": 0.2222222222222222
         },
         {
           "bin": "0.4-0.5",
-          "n": 19,
-          "mean_pred": 0.4601471182411468,
-          "observed": 0.10526315789473684
+          "n": 8,
+          "mean_pred": 0.45031172037124634,
+          "observed": 0.25
         },
         {
           "bin": "0.5-0.6",
-          "n": 10,
-          "mean_pred": 0.5306415590284385,
-          "observed": 0.5
+          "n": 14,
+          "mean_pred": 0.5596424341201782,
+          "observed": 0.2857142857142857
         },
         {
           "bin": "0.6-0.7",
-          "n": 11,
-          "mean_pred": 0.6618453176063491,
-          "observed": 0.6363636363636364
+          "n": 10,
+          "mean_pred": 0.6408195495605469,
+          "observed": 0.4
         },
         {
           "bin": "0.7-0.8",
-          "n": 16,
-          "mean_pred": 0.7540540008241401,
-          "observed": 0.9375
+          "n": 13,
+          "mean_pred": 0.7650357484817505,
+          "observed": 0.7692307692307693
         },
         {
           "bin": "0.8-0.9",
-          "n": 54,
-          "mean_pred": 0.8520261499448308,
-          "observed": 0.9629629629629629
+          "n": 64,
+          "mean_pred": 0.8637543320655823,
+          "observed": 0.859375
         },
         {
           "bin": "0.9-1.0",
-          "n": 46,
-          "mean_pred": 0.9346703615730396,
-          "observed": 0.8695652173913043
+          "n": 118,
+          "mean_pred": 0.9390550255775452,
+          "observed": 0.940677966101695
         }
       ],
       "output_label": "late-payment risk score"
     },
-    "limited_history_share": 0.09859154929577464,
-    "excluded_unknown": 136
+    "limited_history_share": 0.09595959595959595,
+    "excluded_unknown": 122
   },
   "cash": {
     "origins": [
@@ -292,31 +292,54 @@
     ],
     "horizon_weeks": 4,
     "median_delay": {
-      "mae_rupees_per_week": 2051866.0,
-      "wape": 0.20551373676618442,
+      "mae_rupees_per_week": 3543992.5,
+      "wape": 0.3884151750535223,
       "mae_by_horizon_week": [
-        2581990.0,
-        4357216.0,
-        606840.0,
-        661418.0
+        2309254.0,
+        8252984.0,
+        2115664.0,
+        1498068.0
       ]
     },
     "due_date": {
-      "mae_rupees_per_week": 4440480.5,
-      "wape": 0.44475601262088993,
+      "mae_rupees_per_week": 6042685.0,
+      "wape": 0.662267358655046,
       "mae_by_horizon_week": [
-        3735736.0,
-        10969490.0,
-        1670308.0,
-        1386388.0
+        3381258.0,
+        16528152.0,
+        2316658.0,
+        1944672.0
       ]
     },
-    "improvement_vs_due_date": 0.5379180248623995
+    "improvement_vs_due_date": 0.4135069923386706
   },
   "plots": [
     "confusion_matrix.png",
     "pr_curve.png"
   ],
+  "extraction": {
+    "generated_at": "2026-10-09T16:50:30+00:00",
+    "summary": {
+      "field_accuracy": 1.0,
+      "engine": "pdf_text_regex (40)",
+      "files": 40,
+      "line_items_exact": 1.0
+    },
+    "per_field": {
+      "vendor_name": 1.0,
+      "ntn": 1.0,
+      "strn": 1.0,
+      "invoice_no": 1.0,
+      "invoice_date": 1.0,
+      "due_date": 1.0,
+      "subtotal": 1.0,
+      "tax": 1.0,
+      "total": 1.0,
+      "iban": 1.0
+    },
+    "misses": [],
+    "note": "Ground truth = the generator's invoice data. Gemini results appear here only when GEMINI_API_KEY is set."
+  },
   "robustness": {
     "seeds": [
       42,
@@ -328,190 +351,190 @@
     "per_seed": [
       {
         "seed": 42,
-        "n_fraud": 13,
+        "n_fraud": 22,
         "recall": 1.0,
-        "false_alarm_rate": 0.04754601226993865,
-        "precision_red": 0.8,
-        "pr_auc": 0.9685314685314685,
-        "baseline_recall": 0.15384615384615385,
-        "baseline_false_alarm_rate": 0.04294478527607362
+        "false_alarm_rate": 0.03571428571428571,
+        "precision_red": 0.9545454545454546,
+        "pr_auc": 0.9930069930069931,
+        "baseline_recall": 0.22727272727272727,
+        "baseline_false_alarm_rate": 0.032467532467532464
       },
       {
         "seed": 43,
-        "n_fraud": 18,
+        "n_fraud": 17,
         "recall": 1.0,
-        "false_alarm_rate": 0.027463651050080775,
-        "precision_red": 0.8947368421052632,
-        "pr_auc": 0.9577219191770275,
-        "baseline_recall": 0.2222222222222222,
-        "baseline_false_alarm_rate": 0.0420032310177706
+        "false_alarm_rate": 0.01576182136602452,
+        "precision_red": 0.85,
+        "pr_auc": 1.0,
+        "baseline_recall": 0.35294117647058826,
+        "baseline_false_alarm_rate": 0.040280210157618214
       },
       {
         "seed": 44,
         "n_fraud": 18,
-        "recall": 0.9444444444444444,
-        "false_alarm_rate": 0.035256410256410256,
-        "precision_red": 1.0,
-        "pr_auc": 0.954861111111111,
-        "baseline_recall": 0.3333333333333333,
-        "baseline_false_alarm_rate": 0.06570512820512821
+        "recall": 1.0,
+        "false_alarm_rate": 0.013803680981595092,
+        "precision_red": 0.9444444444444444,
+        "pr_auc": 0.9765515892966873,
+        "baseline_recall": 0.2777777777777778,
+        "baseline_false_alarm_rate": 0.05828220858895705
       },
       {
         "seed": 45,
-        "n_fraud": 16,
+        "n_fraud": 15,
         "recall": 1.0,
-        "false_alarm_rate": 0.025210084033613446,
-        "precision_red": 0.8421052631578947,
+        "false_alarm_rate": 0.021885521885521887,
+        "precision_red": 0.9375,
         "pr_auc": 1.0,
-        "baseline_recall": 0.25,
-        "baseline_false_alarm_rate": 0.03361344537815126
+        "baseline_recall": 0.3333333333333333,
+        "baseline_false_alarm_rate": 0.03535353535353535
       },
       {
         "seed": 46,
-        "n_fraud": 20,
+        "n_fraud": 18,
         "recall": 1.0,
-        "false_alarm_rate": 0.03685897435897436,
-        "precision_red": 0.8,
-        "pr_auc": 0.986904761904762,
-        "baseline_recall": 0.15,
-        "baseline_false_alarm_rate": 0.02403846153846154
+        "false_alarm_rate": 0.03164556962025317,
+        "precision_red": 0.75,
+        "pr_auc": 0.9355838267165498,
+        "baseline_recall": 0.3888888888888889,
+        "baseline_false_alarm_rate": 0.0379746835443038
       }
     ],
     "aggregate": {
       "recall": {
-        "mean": 0.9888888888888889,
-        "min": 0.9444444444444444,
+        "mean": 1.0,
+        "min": 1.0,
         "max": 1.0
       },
       "false_alarm_rate": {
-        "mean": 0.0344670263938035,
-        "min": 0.025210084033613446,
-        "max": 0.04754601226993865
+        "mean": 0.023762175913536073,
+        "min": 0.013803680981595092,
+        "max": 0.03571428571428571
       },
       "precision_red": {
-        "mean": 0.8673684210526316,
-        "min": 0.8,
-        "max": 1.0
+        "mean": 0.8872979797979799,
+        "min": 0.75,
+        "max": 0.9545454545454546
       },
       "pr_auc": {
-        "mean": 0.9736038521448738,
-        "min": 0.954861111111111,
+        "mean": 0.9810284818040461,
+        "min": 0.9355838267165498,
         "max": 1.0
       },
       "baseline_recall": {
-        "mean": 0.22188034188034184,
-        "min": 0.15,
-        "max": 0.3333333333333333
+        "mean": 0.3160427807486631,
+        "min": 0.22727272727272727,
+        "max": 0.3888888888888889
       },
       "baseline_false_alarm_rate": {
-        "mean": 0.04166101028311704,
-        "min": 0.02403846153846154,
-        "max": 0.06570512820512821
+        "mean": 0.04087163402238938,
+        "min": 0.032467532467532464,
+        "max": 0.05828220858895705
       }
     },
     "pooled": {
-      "recall": 0.9882352941176471,
-      "recall_red": 0.9647058823529412,
-      "precision_alert": 0.4375,
-      "precision_red": 0.8631578947368421,
-      "false_alarm_rate": 0.03468208092485549,
-      "false_alarm_rate_red": 0.004174694926140013,
-      "pr_auc": 0.966111772895793,
-      "alerts": 192,
-      "reds": 95,
-      "rupees_fraud": 1840507600,
-      "rupees_protected_red": 1807561800,
-      "rupees_flagged": 1824507000,
+      "recall": 1.0,
+      "recall_red": 0.9777777777777777,
+      "precision_alert": 0.5521472392638037,
+      "precision_red": 0.88,
+      "false_alarm_rate": 0.023817292006525284,
+      "false_alarm_rate_red": 0.003915171288743882,
+      "pr_auc": 0.9685783950682645,
+      "alerts": 163,
+      "reds": 100,
+      "rupees_fraud": 2393354600,
+      "rupees_protected_red": 2345054800,
+      "rupees_flagged": 2393354600,
       "per_type": {
         "F1": {
           "name": "Duplicate invoice",
-          "n": 24,
-          "caught": 23,
-          "recall": 0.9583333333333334,
-          "red": 22
+          "n": 26,
+          "caught": 26,
+          "recall": 1.0,
+          "red": 26
         },
         "F2": {
           "name": "Bank-detail change",
-          "n": 12,
-          "caught": 12,
+          "n": 11,
+          "caught": 11,
           "recall": 1.0,
-          "red": 12
+          "red": 11
         },
         "F3": {
           "name": "Shell vendor",
-          "n": 7,
-          "caught": 7,
+          "n": 10,
+          "caught": 10,
           "recall": 1.0,
-          "red": 7
+          "red": 10
         },
         "F4": {
           "name": "Inflated price",
-          "n": 16,
-          "caught": 16,
-          "recall": 1.0,
-          "red": 15
-        },
-        "F5": {
-          "name": "Split payment",
           "n": 14,
           "caught": 14,
           "recall": 1.0,
           "red": 14
+        },
+        "F5": {
+          "name": "Split payment",
+          "n": 17,
+          "caught": 17,
+          "recall": 1.0,
+          "red": 16
         },
         "F7": {
           "name": "Out-of-hours self-approval",
           "n": 12,
           "caught": 12,
           "recall": 1.0,
-          "red": 12
+          "red": 11
         }
       }
     },
     "pooled_baseline": {
-      "recall": 0.2235294117647059,
-      "recall_red": 0.2235294117647059,
-      "precision_alert": 0.12751677852348994,
-      "precision_red": 0.12751677852348994,
-      "false_alarm_rate": 0.04174694926140013,
-      "false_alarm_rate_red": 0.04174694926140013,
-      "pr_auc": 0.04913519782077577,
-      "alerts": 149,
-      "reds": 149,
-      "rupees_fraud": 1840507600,
-      "rupees_protected_red": 367730100,
-      "rupees_flagged": 367730100,
+      "recall": 0.3111111111111111,
+      "recall_red": 0.3111111111111111,
+      "precision_alert": 0.18181818181818182,
+      "precision_red": 0.18181818181818182,
+      "false_alarm_rate": 0.041109298531810765,
+      "false_alarm_rate_red": 0.041109298531810765,
+      "pr_auc": 0.07621700363380238,
+      "alerts": 154,
+      "reds": 154,
+      "rupees_fraud": 2393354600,
+      "rupees_protected_red": 812941100,
+      "rupees_flagged": 812941100,
       "per_type": {
         "F1": {
           "name": "Duplicate invoice",
-          "n": 24,
-          "caught": 18,
-          "recall": 0.75,
-          "red": 18
+          "n": 26,
+          "caught": 21,
+          "recall": 0.8076923076923077,
+          "red": 21
         },
         "F2": {
           "name": "Bank-detail change",
-          "n": 12,
-          "caught": 1,
-          "recall": 0.08333333333333333,
-          "red": 1
+          "n": 11,
+          "caught": 2,
+          "recall": 0.18181818181818182,
+          "red": 2
         },
         "F3": {
           "name": "Shell vendor",
-          "n": 7,
+          "n": 10,
           "caught": 0,
           "recall": 0.0,
           "red": 0
         },
         "F4": {
           "name": "Inflated price",
-          "n": 16,
-          "caught": 0,
-          "recall": 0.0,
-          "red": 0
+          "n": 14,
+          "caught": 5,
+          "recall": 0.35714285714285715,
+          "red": 5
         },
         "F5": {
           "name": "Split payment",
-          "n": 14,
+          "n": 17,
           "caught": 0,
           "recall": 0.0,
           "red": 0

@@ -25,6 +25,7 @@ PROMPT_WEIGHTS = {"risk_model": 0.4, "anomaly": 0.2, "duplicate": 0.2, "graph": 
 FAR_TARGET = 0.04  # tune for <= 4% on validation to leave headroom under the 5% requirement
 RED_FAR_TARGET = 0.005
 WEIGHT_GRID = [0.1, 0.25, 0.5, 0.75, 1.0]
+DECISIVE = 0.9  # duplicate / graph signal at which that engine alone must reach red
 
 
 @dataclass
@@ -154,6 +155,9 @@ def tune_fusion(S: pd.DataFrame, y: np.ndarray) -> dict:
         tr = max(ty + 0.05, _threshold_for_far(raw[legit], forced_r, RED_FAR_TARGET))
         if tr >= 0.99:
             continue
+        # Design rule: a near-certain duplicate or an undisclosed employee link is enough to block on its own.
+        if min(wd, wg) * DECISIVE < tr:
+            continue
         m = evaluate_fusion(S, y, w, ty, tr)
         dist = sum(abs(w[e] - PROMPT_WEIGHTS[e]) for e in ENGINES)
         key = (round(m["recall"], 4), round(m["recall_red"], 4), -dist)
@@ -161,7 +165,7 @@ def tune_fusion(S: pd.DataFrame, y: np.ndarray) -> dict:
             best = (key, {"weights": w, "t_yellow": round(ty, 4), "t_red": round(tr, 4), "val": m})
     out = best[1]
     out["source"] = ("tuned on out-of-time folds, months 7-8 and 9-10 (grid search: max recall s.t. "
-                     "false alarms <= 4%, red false alarms <= 0.5%)")
+                     "false alarms <= 4%, red false alarms <= 0.5%, and a 0.9 duplicate or graph signal alone reaches red)")
     # Prompt defaults evaluated with thresholds fitted the same way, for the ablation table
     w = PROMPT_WEIGHTS
     raw = np.clip(sum(w[e] * S[e].values for e in ENGINES), 0, 1)
