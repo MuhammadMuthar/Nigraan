@@ -25,6 +25,7 @@ PROMPT = (
     "You write a short case note for a finance approver at a Pakistani SME. Use ONLY the JSON evidence below. "
     "Write 3-4 plain sentences explaining why this payment was stopped, then one line starting 'Verify:' with the "
     "single most useful verification step. Do not invent facts, numbers, names or dates. Do not give a score. "
+    "Copy amounts, dates and invoice numbers exactly as they appear in the evidence (e.g. 'Rs 4,50,000'). "
     "{lang}\n\nEVIDENCE:\n{evidence}"
 )
 LANG = {"en": "Write in English.", "ur": "Write in Roman Urdu (Urdu in Latin script), simple business language."}
@@ -90,7 +91,13 @@ def case_summary(db: Session, case: Case, lang: str = "en") -> dict:
                 "guardrail": "failed: the summary contained a number not in the evidence, so it is hidden"}
     # deterministic template (no LLM available)
     reasons = ev["reasons"][:3]
-    t = (f"Nigraan {ev['decision']} the {ev['amount']} payment to {ev['vendor']} (invoice {ev['invoice_no']}) "
-         f"as a possible {ev['suspected_pattern'].lower()}. " + " ".join(f"{r}." for r in reasons)
-         + f"\nVerify: {ev['suggested_verification']}")
+    if lang == "ur":
+        verb = {"blocked": "rok di hai", "needs review": "review ke liye bheji hai", "allowed": "allow ki hai"}[ev["decision"]]
+        t = (f"Nigraan ne {ev['vendor']} ko {ev['amount']} ki payment (invoice {ev['invoice_no']}) {verb}; "
+             f"shak hai ke yeh {ev['suspected_pattern'].lower()} ho sakta hai. Wajah: " + "; ".join(reasons) + "."
+             + f"\nTasdeeq: {ev['suggested_verification']}")
+    else:
+        t = (f"Nigraan {ev['decision']} the {ev['amount']} payment to {ev['vendor']} (invoice {ev['invoice_no']}) "
+             f"as a possible {ev['suspected_pattern'].lower()}. " + " ".join(f"{r}." for r in reasons)
+             + f"\nVerify: {ev['suggested_verification']}")
     return {"mode": "template", "text": t, "evidence": ev, "guardrail": "template (no LLM key configured)"}
