@@ -15,7 +15,7 @@ COPY backend/ /srv/backend/
 COPY models/ /srv/models/
 COPY demo_week/ /srv/demo_week/
 
-ENV MODELS_DIR=/srv/models DEMO_WEEK_DIR=/srv/demo_week DATA_OUT_DIR=/tmp/nigraan_out PORT=8000
+ENV FORWARDED_ALLOW_IPS=* MODELS_DIR=/srv/models DEMO_WEEK_DIR=/srv/demo_week DATA_OUT_DIR=/tmp/nigraan_out PORT=8000
 EXPOSE 8000
 # One worker: models and the scoring cache live in process memory (~300 MB).
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1 --proxy-headers"]

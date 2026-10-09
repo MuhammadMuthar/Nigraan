@@ -7,6 +7,7 @@ from the last tuning so the UI bands stay stable; the engines are refit.
 from __future__ import annotations
 
 import json
+import threading
 import shutil
 from datetime import datetime, timezone
 
@@ -25,7 +26,15 @@ from ml.fraud_training import evaluate_fusion, signals_for, train_engines
 from ml.train_all import save_fraud
 
 
+_lock = threading.Lock()
+
+
 def retrain_from_db(db: Session) -> dict:
+    with _lock:
+        return _retrain(db)
+
+
+def _retrain(db: Session) -> dict:
     s = get_settings()
     t0 = datetime.now(timezone.utc)
     L = Ledger.from_db(db)
@@ -40,6 +49,7 @@ def retrain_from_db(db: Session) -> dict:
     labelled = pd.Series((pays.loc[X.index, "created_at"] < audited).values | X.index.isin(list(resolved_ids)), index=X.index)
     types = types_from_cases(L)
     f1 = set(types[types == "F1"].index)
+    db.rollback()  # data is in pandas now; don't hold read locks while training
     old = json.loads((runtime.models_path / "fraud_meta.json").read_text())
     fusion = old["fusion"]
 
@@ -60,7 +70,7 @@ def retrain_from_db(db: Session) -> dict:
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
     for f in ("late_model.joblib", "late_meta.json", "metrics.json"):
-        src = runtime.models_path / f
+        src = s.models_dir / f  # shipped copies: retrain never refits the late model
         if src.exists():
             shutil.copy(src, out_dir / f)
     meta = dict(old, iso_q=list(final.iso_q), n_pos=int(y[labelled].sum()), n_neg=int((y[labelled] == 0).sum()),
