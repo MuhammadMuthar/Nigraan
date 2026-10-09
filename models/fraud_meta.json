@@ -1,0 +1,77 @@
+{
+  "fusion": {
+    "weights": {
+      "risk_model": 0.5,
+      "anomaly": 0.2,
+      "duplicate": 0.25,
+      "graph": 0.25
+    },
+    "t_yellow": 0.1128,
+    "t_red": 0.3093,
+    "val": {
+      "recall": 1.0,
+      "recall_red": 0.9714285714285714,
+      "far": 0.03996983408748114,
+      "far_red": 0.004524886877828055,
+      "precision_red": 0.85,
+      "precision_alert": 0.3977272727272727,
+      "pr_auc": 0.9671634936976101
+    },
+    "source": "tuned on out-of-time folds, months 7-8 and 9-10 (grid search: max recall s.t. false alarms <= 4%, red false alarms <= 0.5%)",
+    "prompt_defaults_val": {
+      "t_yellow": 0.10112394801812588,
+      "t_red": 0.2655050656794655,
+      "recall": 1.0,
+      "recall_red": 0.9714285714285714,
+      "far": 0.03996983408748114,
+      "far_red": 0.004524886877828055,
+      "precision_red": 0.85,
+      "precision_alert": 0.3977272727272727,
+      "pr_auc": 0.9673230729570839
+    }
+  },
+  "iso_q": [
+    0.4918708331625144,
+    0.603160210830592
+  ],
+  "xgb_params": {
+    "max_depth": 4,
+    "rounds": 250,
+    "spw": "sqrt"
+  },
+  "features": [
+    "amount_log",
+    "amount_vs_vendor_median",
+    "amount_vendor_z",
+    "unit_price_vs_median_max",
+    "unit_price_vs_vendor_last",
+    "days_since_bank_change",
+    "account_changed",
+    "first_payment_to_account",
+    "changer_prior_edits",
+    "changer_edit_share",
+    "change_unverified",
+    "vendor_age_days",
+    "vendor_prior_invoices",
+    "is_round_amount",
+    "vendor_round_share",
+    "no_sales_tax",
+    "same_payee_48h",
+    "same_payee_48h_vs_limit",
+    "limit_gap",
+    "creator_can_approve",
+    "entry_hour",
+    "is_night",
+    "off_day",
+    "vague_line_share",
+    "line_count",
+    "days_receipt_to_payment",
+    "days_to_due"
+  ],
+  "n_pos": 83,
+  "n_neg": 3257,
+  "seed": 42,
+  "trained_on": "payments in months 1-10 with audited labels; fusion tuned on out-of-time folds (months 7-8, 9-10)",
+  "version": "v1.0-s42",
+  "trained_at": "2026-10-09T16:27:21+00:00"
+}

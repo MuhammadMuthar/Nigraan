@@ -1,0 +1,530 @@
+{
+  "generated_at": "2026-10-09T16:24:41+00:00",
+  "model_version": "v1.0-s42",
+  "seed": 42,
+  "test_months": "11-12",
+  "test_period": "Aug-Sep 2026 (months 11-12); training used Oct 2025-Jul 2026 only",
+  "fraud": {
+    "n_payments": 665,
+    "n_fraud": 13,
+    "ms_per_payment": 8.5,
+    "nigraan": {
+      "recall": 1.0,
+      "recall_red": 0.9230769230769231,
+      "precision_alert": 0.29545454545454547,
+      "precision_red": 0.8,
+      "false_alarm_rate": 0.04754601226993865,
+      "false_alarm_rate_red": 0.004601226993865031,
+      "pr_auc": 0.9685314685314685,
+      "alerts": 44,
+      "reds": 15,
+      "rupees_fraud": 270265200,
+      "rupees_protected_red": 254231800,
+      "rupees_flagged": 270265200,
+      "per_type": {
+        "F1": {
+          "name": "Duplicate invoice",
+          "n": 4,
+          "caught": 4,
+          "recall": 1.0,
+          "red": 3
+        },
+        "F2": {
+          "name": "Bank-detail change",
+          "n": 1,
+          "caught": 1,
+          "recall": 1.0,
+          "red": 1
+        },
+        "F3": {
+          "name": "Shell vendor",
+          "n": 1,
+          "caught": 1,
+          "recall": 1.0,
+          "red": 1
+        },
+        "F4": {
+          "name": "Inflated price",
+          "n": 3,
+          "caught": 3,
+          "recall": 1.0,
+          "red": 3
+        },
+        "F5": {
+          "name": "Split payment",
+          "n": 2,
+          "caught": 2,
+          "recall": 1.0,
+          "red": 2
+        },
+        "F7": {
+          "name": "Out-of-hours self-approval",
+          "n": 2,
+          "caught": 2,
+          "recall": 1.0,
+          "red": 2
+        }
+      }
+    },
+    "baseline_rules_only": {
+      "recall": 0.15384615384615385,
+      "recall_red": 0.15384615384615385,
+      "precision_alert": 0.06666666666666667,
+      "precision_red": 0.06666666666666667,
+      "false_alarm_rate": 0.04294478527607362,
+      "false_alarm_rate_red": 0.04294478527607362,
+      "pr_auc": 0.026797763639868903,
+      "alerts": 30,
+      "reds": 30,
+      "rupees_fraud": 270265200,
+      "rupees_protected_red": 35536000,
+      "rupees_flagged": 35536000,
+      "per_type": {
+        "F1": {
+          "name": "Duplicate invoice",
+          "n": 4,
+          "caught": 2,
+          "recall": 0.5,
+          "red": 2
+        },
+        "F2": {
+          "name": "Bank-detail change",
+          "n": 1,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        },
+        "F3": {
+          "name": "Shell vendor",
+          "n": 1,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        },
+        "F4": {
+          "name": "Inflated price",
+          "n": 3,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        },
+        "F5": {
+          "name": "Split payment",
+          "n": 2,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        },
+        "F7": {
+          "name": "Out-of-hours self-approval",
+          "n": 2,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        }
+      }
+    },
+    "ablation": {
+      "without_risk_model": {
+        "recall": 0.7692307692307693,
+        "false_alarm_rate": 0.03680981595092025
+      },
+      "without_anomaly": {
+        "recall": 1.0,
+        "false_alarm_rate": 0.023006134969325152
+      },
+      "without_duplicate": {
+        "recall": 0.9230769230769231,
+        "false_alarm_rate": 0.03987730061349693
+      },
+      "without_graph": {
+        "recall": 1.0,
+        "false_alarm_rate": 0.04294478527607362
+      }
+    }
+  },
+  "fusion": {
+    "weights": {
+      "risk_model": 0.75,
+      "anomaly": 0.1,
+      "duplicate": 0.25,
+      "graph": 0.25
+    },
+    "t_yellow": 0.0586,
+    "t_red": 0.3445,
+    "source": "tuned on out-of-time folds, months 7-8 and 9-10 (grid search: max recall s.t. false alarms <= 4%, red false alarms <= 0.5%)"
+  },
+  "fusion_validation": {
+    "recall": 0.9787234042553191,
+    "recall_red": 0.8723404255319149,
+    "far": 0.03971631205673759,
+    "far_red": 0.004964539007092199,
+    "precision_red": 0.8541666666666666,
+    "precision_alert": 0.45098039215686275,
+    "pr_auc": 0.9397564451635019
+  },
+  "fusion_prompt_defaults_validation": {
+    "t_yellow": 0.0889649698607064,
+    "t_red": 0.20674374861812592,
+    "recall": 0.9361702127659575,
+    "recall_red": 0.8936170212765957,
+    "far": 0.03971631205673759,
+    "far_red": 0.004964539007092199,
+    "precision_red": 0.8571428571428571,
+    "precision_alert": 0.44,
+    "pr_auc": 0.8644364811533647
+  },
+  "late_payment": {
+    "n_test": 355,
+    "late_rate_test": 0.48732394366197185,
+    "models": {
+      "baseline": {
+        "pr_auc": 0.48732394366197185,
+        "roc_auc": 0.5,
+        "brier": 0.250446835945249,
+        "precision_top20": 0.4507042253521127,
+        "recall_top20": 0.18497109826589594,
+        "n": 355,
+        "late_rate": 0.48732394366197185
+      },
+      "lr": {
+        "pr_auc": 0.8071832457709939,
+        "roc_auc": 0.8094708759448644,
+        "brier": 0.16369690017731306,
+        "precision_top20": 0.9014084507042254,
+        "recall_top20": 0.3699421965317919,
+        "n": 355,
+        "late_rate": 0.48732394366197185
+      },
+      "xgb": {
+        "pr_auc": 0.8157468760753949,
+        "roc_auc": 0.8130280124499777,
+        "brier": 0.15863387286663055,
+        "precision_top20": 0.9154929577464789,
+        "recall_top20": 0.37572254335260113,
+        "n": 355,
+        "late_rate": 0.48732394366197185
+      }
+    },
+    "shipped": {
+      "kind": "lr",
+      "pr_auc": 0.7862399524317671,
+      "roc_auc": 0.8047386139871688,
+      "brier": 0.16563319566849177,
+      "precision_top20": 0.9014084507042254,
+      "recall_top20": 0.3699421965317919,
+      "n": 355,
+      "late_rate": 0.48732394366197185,
+      "reliability": [
+        {
+          "bin": "0.0-0.1",
+          "n": 10,
+          "mean_pred": 0.09237633067977938,
+          "observed": 0.2
+        },
+        {
+          "bin": "0.1-0.2",
+          "n": 124,
+          "mean_pred": 0.1419481992340782,
+          "observed": 0.24193548387096775
+        },
+        {
+          "bin": "0.2-0.3",
+          "n": 37,
+          "mean_pred": 0.24280823070405697,
+          "observed": 0.2972972972972973
+        },
+        {
+          "bin": "0.3-0.4",
+          "n": 28,
+          "mean_pred": 0.33723655078902925,
+          "observed": 0.32142857142857145
+        },
+        {
+          "bin": "0.4-0.5",
+          "n": 19,
+          "mean_pred": 0.4601471182411468,
+          "observed": 0.10526315789473684
+        },
+        {
+          "bin": "0.5-0.6",
+          "n": 10,
+          "mean_pred": 0.5306415590284385,
+          "observed": 0.5
+        },
+        {
+          "bin": "0.6-0.7",
+          "n": 11,
+          "mean_pred": 0.6618453176063491,
+          "observed": 0.6363636363636364
+        },
+        {
+          "bin": "0.7-0.8",
+          "n": 16,
+          "mean_pred": 0.7540540008241401,
+          "observed": 0.9375
+        },
+        {
+          "bin": "0.8-0.9",
+          "n": 54,
+          "mean_pred": 0.8520261499448308,
+          "observed": 0.9629629629629629
+        },
+        {
+          "bin": "0.9-1.0",
+          "n": 46,
+          "mean_pred": 0.9346703615730396,
+          "observed": 0.8695652173913043
+        }
+      ],
+      "output_label": "late-payment risk score"
+    },
+    "limited_history_share": 0.09859154929577464,
+    "excluded_unknown": 136
+  },
+  "cash": {
+    "origins": [
+      "2026-08-03",
+      "2026-08-10",
+      "2026-08-17",
+      "2026-08-24",
+      "2026-08-31"
+    ],
+    "horizon_weeks": 4,
+    "median_delay": {
+      "mae_rupees_per_week": 2051866.0,
+      "wape": 0.20551373676618442,
+      "mae_by_horizon_week": [
+        2581990.0,
+        4357216.0,
+        606840.0,
+        661418.0
+      ]
+    },
+    "due_date": {
+      "mae_rupees_per_week": 4440480.5,
+      "wape": 0.44475601262088993,
+      "mae_by_horizon_week": [
+        3735736.0,
+        10969490.0,
+        1670308.0,
+        1386388.0
+      ]
+    },
+    "improvement_vs_due_date": 0.5379180248623995
+  },
+  "plots": [
+    "confusion_matrix.png",
+    "pr_curve.png"
+  ],
+  "robustness": {
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "per_seed": [
+      {
+        "seed": 42,
+        "n_fraud": 13,
+        "recall": 1.0,
+        "false_alarm_rate": 0.04754601226993865,
+        "precision_red": 0.8,
+        "pr_auc": 0.9685314685314685,
+        "baseline_recall": 0.15384615384615385,
+        "baseline_false_alarm_rate": 0.04294478527607362
+      },
+      {
+        "seed": 43,
+        "n_fraud": 18,
+        "recall": 1.0,
+        "false_alarm_rate": 0.027463651050080775,
+        "precision_red": 0.8947368421052632,
+        "pr_auc": 0.9577219191770275,
+        "baseline_recall": 0.2222222222222222,
+        "baseline_false_alarm_rate": 0.0420032310177706
+      },
+      {
+        "seed": 44,
+        "n_fraud": 18,
+        "recall": 0.9444444444444444,
+        "false_alarm_rate": 0.035256410256410256,
+        "precision_red": 1.0,
+        "pr_auc": 0.954861111111111,
+        "baseline_recall": 0.3333333333333333,
+        "baseline_false_alarm_rate": 0.06570512820512821
+      },
+      {
+        "seed": 45,
+        "n_fraud": 16,
+        "recall": 1.0,
+        "false_alarm_rate": 0.025210084033613446,
+        "precision_red": 0.8421052631578947,
+        "pr_auc": 1.0,
+        "baseline_recall": 0.25,
+        "baseline_false_alarm_rate": 0.03361344537815126
+      },
+      {
+        "seed": 46,
+        "n_fraud": 20,
+        "recall": 1.0,
+        "false_alarm_rate": 0.03685897435897436,
+        "precision_red": 0.8,
+        "pr_auc": 0.986904761904762,
+        "baseline_recall": 0.15,
+        "baseline_false_alarm_rate": 0.02403846153846154
+      }
+    ],
+    "aggregate": {
+      "recall": {
+        "mean": 0.9888888888888889,
+        "min": 0.9444444444444444,
+        "max": 1.0
+      },
+      "false_alarm_rate": {
+        "mean": 0.0344670263938035,
+        "min": 0.025210084033613446,
+        "max": 0.04754601226993865
+      },
+      "precision_red": {
+        "mean": 0.8673684210526316,
+        "min": 0.8,
+        "max": 1.0
+      },
+      "pr_auc": {
+        "mean": 0.9736038521448738,
+        "min": 0.954861111111111,
+        "max": 1.0
+      },
+      "baseline_recall": {
+        "mean": 0.22188034188034184,
+        "min": 0.15,
+        "max": 0.3333333333333333
+      },
+      "baseline_false_alarm_rate": {
+        "mean": 0.04166101028311704,
+        "min": 0.02403846153846154,
+        "max": 0.06570512820512821
+      }
+    },
+    "pooled": {
+      "recall": 0.9882352941176471,
+      "recall_red": 0.9647058823529412,
+      "precision_alert": 0.4375,
+      "precision_red": 0.8631578947368421,
+      "false_alarm_rate": 0.03468208092485549,
+      "false_alarm_rate_red": 0.004174694926140013,
+      "pr_auc": 0.966111772895793,
+      "alerts": 192,
+      "reds": 95,
+      "rupees_fraud": 1840507600,
+      "rupees_protected_red": 1807561800,
+      "rupees_flagged": 1824507000,
+      "per_type": {
+        "F1": {
+          "name": "Duplicate invoice",
+          "n": 24,
+          "caught": 23,
+          "recall": 0.9583333333333334,
+          "red": 22
+        },
+        "F2": {
+          "name": "Bank-detail change",
+          "n": 12,
+          "caught": 12,
+          "recall": 1.0,
+          "red": 12
+        },
+        "F3": {
+          "name": "Shell vendor",
+          "n": 7,
+          "caught": 7,
+          "recall": 1.0,
+          "red": 7
+        },
+        "F4": {
+          "name": "Inflated price",
+          "n": 16,
+          "caught": 16,
+          "recall": 1.0,
+          "red": 15
+        },
+        "F5": {
+          "name": "Split payment",
+          "n": 14,
+          "caught": 14,
+          "recall": 1.0,
+          "red": 14
+        },
+        "F7": {
+          "name": "Out-of-hours self-approval",
+          "n": 12,
+          "caught": 12,
+          "recall": 1.0,
+          "red": 12
+        }
+      }
+    },
+    "pooled_baseline": {
+      "recall": 0.2235294117647059,
+      "recall_red": 0.2235294117647059,
+      "precision_alert": 0.12751677852348994,
+      "precision_red": 0.12751677852348994,
+      "false_alarm_rate": 0.04174694926140013,
+      "false_alarm_rate_red": 0.04174694926140013,
+      "pr_auc": 0.04913519782077577,
+      "alerts": 149,
+      "reds": 149,
+      "rupees_fraud": 1840507600,
+      "rupees_protected_red": 367730100,
+      "rupees_flagged": 367730100,
+      "per_type": {
+        "F1": {
+          "name": "Duplicate invoice",
+          "n": 24,
+          "caught": 18,
+          "recall": 0.75,
+          "red": 18
+        },
+        "F2": {
+          "name": "Bank-detail change",
+          "n": 12,
+          "caught": 1,
+          "recall": 0.08333333333333333,
+          "red": 1
+        },
+        "F3": {
+          "name": "Shell vendor",
+          "n": 7,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        },
+        "F4": {
+          "name": "Inflated price",
+          "n": 16,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        },
+        "F5": {
+          "name": "Split payment",
+          "n": 14,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        },
+        "F7": {
+          "name": "Out-of-hours self-approval",
+          "n": 12,
+          "caught": 0,
+          "recall": 0.0,
+          "red": 0
+        }
+      }
+    },
+    "note": "Each seed is a different synthetic company: generated, trained on months 1-10, tested on 11-12."
+  }
+}

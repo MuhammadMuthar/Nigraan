@@ -1,0 +1,162 @@
+{
+  "01_al_fazal_cold_drinks___co_BL-1558.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "02_faisal_packaging_industries_FPI-02101.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "03_ghani_ghee_mills_enterprises_INV-2461.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "04_ravi_goods_transport_RGT-01719.pdf": {
+    "fraud": "F5",
+    "note": "two invoices just under the Rs 5,00,000 approval limit within 24 h"
+  },
+  "05_al_karim_drinks_distributors___co_INV-2768.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "06_hilal_rice_mills_HRM-3509.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "07_gill_goods_transport_GGT-4676.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "08_ittefaq_goods_transport_INV-2935.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "09_star_personal_care_INV-864.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "10_al_fazal_cosmetics_INV-3649.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "11_al_noor_beverages_BL-1041.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "12_noor_edible_oils_traders_BL-1451.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "13_prime_solutions_PS-1001.pdf": {
+    "fraud": "F3",
+    "note": "vendor phone = employee Imran Butt (Purchase)"
+  },
+  "14_shan_packages_SP-4722.pdf": {
+    "fraud": "F4",
+    "note": "unit price of Bubble Wrap Roll x2.4"
+  },
+  "15_haji_cold_drinks_brothers_BL-4816.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "16_hilal_cosmetics_INV-371.pdf": {
+    "fraud": "F7",
+    "note": "entered by the approver at 23:52 on a Saturday"
+  },
+  "17_usmania_personal_care_corporation_UPC-2843.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "18_lahore_carriage_services_BL-403.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "19_ghani_packaging_industries___co_3684.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "20_royal_pulses_traders_2402.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "21_al_fazal_food_industries_brothers_AFF-2970.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "22_usmania_security_services_enterprises_INV-387.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "23_haji_flour_mills_corporation_HFM-02151.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "24_noor_cleaning_services_INV-1999.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "25_al_noor_traders_1299.pdf": {
+    "fraud": "F2",
+    "note": "vendor bank account changed 10 Oct by email; amount ~3x usual"
+  },
+  "26_punjab_packaging_industries_BL-4353.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "27_al_hamd_soap_works_AHS-03556.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "28_hilal_carriage_services_enterprises_BL-149.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "29_star_cosmetics_4484.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "30_data_oil_mills_DOM-1078.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "31_al_barkat_milk_supply_BL-2259.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "32_al_makkah_packages_4582.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "33_lahore_beverages_enterprises_2126.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "34_madina_dairies_4174.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "35_ravi_goods_transport_RGT-01718.pdf": {
+    "fraud": "F5",
+    "note": "two invoices just under the Rs 5,00,000 approval limit within 24 h"
+  },
+  "36_al_hamd_cosmetics_INV-3394.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "37_sitara_snacks_brothers_INV-2848.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "38_madina_dairies_04159.pdf": {
+    "fraud": "F1",
+    "note": "near-duplicate of 4159 (invoice id 869)"
+  },
+  "39_punjab_dairies_INV-3340.pdf": {
+    "fraud": null,
+    "note": ""
+  },
+  "40_al_rehman_foods__pvt__ltd_ARF-01505.pdf": {
+    "fraud": null,
+    "note": ""
+  }
+}

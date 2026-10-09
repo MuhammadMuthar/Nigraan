@@ -1,0 +1,27 @@
+# Render blueprint: New + > Blueprint > pick this repo. Creates the API and a Postgres database.
+services:
+  - type: web
+    name: nigraan-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nigraan-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DEMO_MODE
+        value: "true"
+      - key: ALLOWED_ORIGIN
+        value: https://nigraan.vercel.app
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: HASH_SALT
+        value: nigraan-demo-salt
+databases:
+  - name: nigraan-db
+    plan: free

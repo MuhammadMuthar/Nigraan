@@ -1,0 +1,12 @@
+{
+  "run_date": "2026-10-12",
+  "pay_date": "2026-10-13",
+  "count": 40,
+  "calibration": {
+    "opening": 483500000,
+    "low_all_lines": 232513800,
+    "breach_all_lines": "2026-10-13",
+    "low_frauds_blocked": 561005300,
+    "breach_frauds_blocked": "None"
+  }
+}

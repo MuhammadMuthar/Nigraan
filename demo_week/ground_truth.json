@@ -1,0 +1,1132 @@
+{
+  "01_al_fazal_cold_drinks___co_BL-1558.pdf": {
+    "vendor_name": "Al-Fazal Cold Drinks & Co.",
+    "ntn": "7102120-9",
+    "strn": "8425222123664",
+    "invoice_no": "BL-1558",
+    "invoice_date": "2026-09-14",
+    "due_date": "2026-10-14",
+    "line_items": [
+      {
+        "name": "Lemon Lime 1.5L",
+        "qty": 10.0,
+        "unit_price": 2160.0,
+        "amount": 21600.0
+      }
+    ],
+    "subtotal": 21600.0,
+    "tax": 3888.0,
+    "total": 25488.0,
+    "iban": "PK64UNIL6433509905333597"
+  },
+  "02_faisal_packaging_industries_FPI-02101.pdf": {
+    "vendor_name": "Faisal Packaging Industries",
+    "ntn": "8984531-8",
+    "strn": "9540020778858",
+    "invoice_no": "FPI/02101",
+    "invoice_date": "2026-10-01",
+    "due_date": "2026-10-16",
+    "line_items": [
+      {
+        "name": "Packing Tape 2in",
+        "qty": 12.0,
+        "unit_price": 4917.0,
+        "amount": 59004.0
+      }
+    ],
+    "subtotal": 59004.0,
+    "tax": 10621.0,
+    "total": 69625.0,
+    "iban": "PK13HABB1439377899774324"
+  },
+  "03_ghani_ghee_mills_enterprises_INV-2461.pdf": {
+    "vendor_name": "Ghani Ghee Mills Enterprises",
+    "ntn": "8654927-3",
+    "strn": "9458345538349",
+    "invoice_no": "INV-2461",
+    "invoice_date": "2026-09-15",
+    "due_date": "2026-10-15",
+    "line_items": [
+      {
+        "name": "Banaspati Ghee 5kg Tin",
+        "qty": 19.0,
+        "unit_price": 3678.0,
+        "amount": 69882.0
+      },
+      {
+        "name": "Cooking Oil 5L Tin",
+        "qty": 26.0,
+        "unit_price": 3817.0,
+        "amount": 99242.0
+      }
+    ],
+    "subtotal": 169124.0,
+    "tax": 30442.0,
+    "total": 199566.0,
+    "iban": "PK98ABPA2476050161356407"
+  },
+  "04_ravi_goods_transport_RGT-01719.pdf": {
+    "vendor_name": "Ravi Goods Transport",
+    "ntn": null,
+    "strn": null,
+    "invoice_no": "RGT/01719",
+    "invoice_date": "2026-10-08",
+    "due_date": "2026-10-11",
+    "line_items": [
+      {
+        "name": "Freight Lahore-Islamabad",
+        "qty": 5.0,
+        "unit_price": 75735.0,
+        "amount": 378675.0
+      },
+      {
+        "name": "Container Shifting",
+        "qty": 3.0,
+        "unit_price": 19257.0,
+        "amount": 57771.0
+      }
+    ],
+    "subtotal": 436446.0,
+    "tax": 0.0,
+    "total": 436446.0,
+    "iban": "PK57HABB2880277950811660"
+  },
+  "05_al_karim_drinks_distributors___co_INV-2768.pdf": {
+    "vendor_name": "Al-Karim Drinks Distributors & Co.",
+    "ntn": "3655172-9",
+    "strn": "6136085070246",
+    "invoice_no": "INV-2768",
+    "invoice_date": "2026-09-14",
+    "due_date": "2026-10-14",
+    "line_items": [
+      {
+        "name": "Lemon Lime 1.5L",
+        "qty": 5.0,
+        "unit_price": 2178.0,
+        "amount": 10890.0
+      }
+    ],
+    "subtotal": 10890.0,
+    "tax": 1960.0,
+    "total": 12850.0,
+    "iban": "PK28MUCB7278639668808723"
+  },
+  "06_hilal_rice_mills_HRM-3509.pdf": {
+    "vendor_name": "Hilal Rice Mills",
+    "ntn": "4963388-6",
+    "strn": "5946005530152",
+    "invoice_no": "HRM-3509",
+    "invoice_date": "2026-09-29",
+    "due_date": "2026-10-14",
+    "line_items": [
+      {
+        "name": "Biryani Masala 50g",
+        "qty": 7.0,
+        "unit_price": 9029.0,
+        "amount": 63203.0
+      }
+    ],
+    "subtotal": 63203.0,
+    "tax": 11377.0,
+    "total": 74580.0,
+    "iban": "PK61MUCB4461055145654514"
+  },
+  "07_gill_goods_transport_GGT-4676.pdf": {
+    "vendor_name": "Gill Goods Transport",
+    "ntn": "3231522-6",
+    "strn": "9281753597304",
+    "invoice_no": "GGT-4676",
+    "invoice_date": "2026-09-15",
+    "due_date": "2026-10-15",
+    "line_items": [
+      {
+        "name": "Freight Lahore-Faisalabad",
+        "qty": 1.0,
+        "unit_price": 31903.0,
+        "amount": 31903.0
+      },
+      {
+        "name": "Toll Tax Reimbursement",
+        "qty": 1.0,
+        "unit_price": 1455.0,
+        "amount": 1455.0
+      }
+    ],
+    "subtotal": 33358.0,
+    "tax": 6004.0,
+    "total": 39362.0,
+    "iban": "PK52MEZN7096891071149751"
+  },
+  "08_ittefaq_goods_transport_INV-2935.pdf": {
+    "vendor_name": "Ittefaq Goods Transport",
+    "ntn": "2364973-8",
+    "strn": "2934290940956",
+    "invoice_no": "INV-2935",
+    "invoice_date": "2026-10-01",
+    "due_date": "2026-10-16",
+    "line_items": [
+      {
+        "name": "Freight Lahore-Sialkot",
+        "qty": 1.0,
+        "unit_price": 32328.0,
+        "amount": 32328.0
+      }
+    ],
+    "subtotal": 32328.0,
+    "tax": 5819.0,
+    "total": 38147.0,
+    "iban": "PK21UNIL1436697228408607"
+  },
+  "09_star_personal_care_INV-864.pdf": {
+    "vendor_name": "Star Personal Care",
+    "ntn": "1884569-1",
+    "strn": "7718724108761",
+    "invoice_no": "INV-864",
+    "invoice_date": "2026-09-02",
+    "due_date": "2026-10-17",
+    "line_items": [
+      {
+        "name": "Hair Oil 200ml",
+        "qty": 2.0,
+        "unit_price": 11814.0,
+        "amount": 23628.0
+      },
+      {
+        "name": "Bath Soap 100g",
+        "qty": 4.0,
+        "unit_price": 8379.0,
+        "amount": 33516.0
+      },
+      {
+        "name": "Razor Pack",
+        "qty": 6.0,
+        "unit_price": 7793.0,
+        "amount": 46758.0
+      }
+    ],
+    "subtotal": 103902.0,
+    "tax": 18702.0,
+    "total": 122604.0,
+    "iban": "PK61ABPA3595699441594313"
+  },
+  "10_al_fazal_cosmetics_INV-3649.pdf": {
+    "vendor_name": "Al-Fazal Cosmetics",
+    "ntn": "9959997-3",
+    "strn": "1160182514714",
+    "invoice_no": "INV-3649",
+    "invoice_date": "2026-09-11",
+    "due_date": "2026-10-11",
+    "line_items": [
+      {
+        "name": "Dishwash Liquid 500ml",
+        "qty": 3.0,
+        "unit_price": 5689.0,
+        "amount": 17067.0
+      },
+      {
+        "name": "Toothpaste 100g",
+        "qty": 3.0,
+        "unit_price": 8295.0,
+        "amount": 24885.0
+      }
+    ],
+    "subtotal": 41952.0,
+    "tax": 7551.0,
+    "total": 49503.0,
+    "iban": "PK07UNIL2224808666172566"
+  },
+  "11_al_noor_beverages_BL-1041.pdf": {
+    "vendor_name": "Al-Noor Beverages",
+    "ntn": "1880091-4",
+    "strn": "5228050622418",
+    "invoice_no": "BL-1041",
+    "invoice_date": "2026-10-03",
+    "due_date": "2026-10-18",
+    "line_items": [
+      {
+        "name": "Orange Drink 1L",
+        "qty": 5.0,
+        "unit_price": 2097.0,
+        "amount": 10485.0
+      },
+      {
+        "name": "Instant Coffee 100g",
+        "qty": 3.0,
+        "unit_price": 24268.0,
+        "amount": 72804.0
+      }
+    ],
+    "subtotal": 83289.0,
+    "tax": 14992.0,
+    "total": 98281.0,
+    "iban": "PK83HABB4478567619146429"
+  },
+  "12_noor_edible_oils_traders_BL-1451.pdf": {
+    "vendor_name": "Noor Edible Oils Traders",
+    "ntn": "4534615-8",
+    "strn": "4889147056013",
+    "invoice_no": "BL-1451",
+    "invoice_date": "2026-09-26",
+    "due_date": "2026-10-11",
+    "line_items": [
+      {
+        "name": "Canola Oil 3L",
+        "qty": 11.0,
+        "unit_price": 13342.0,
+        "amount": 146762.0
+      }
+    ],
+    "subtotal": 146762.0,
+    "tax": 26417.0,
+    "total": 173179.0,
+    "iban": "PK26UNIL2610677786583072"
+  },
+  "13_prime_solutions_PS-1001.pdf": {
+    "vendor_name": "Prime Solutions",
+    "ntn": null,
+    "strn": null,
+    "invoice_no": "PS-1001",
+    "invoice_date": "2026-10-02",
+    "due_date": "2026-10-09",
+    "line_items": [
+      {
+        "name": "Consultancy services - market survey (Sep 2026)",
+        "qty": 1.0,
+        "unit_price": 300000.0,
+        "amount": 300000.0
+      },
+      {
+        "name": "Coordination services",
+        "qty": 1.0,
+        "unit_price": 150000.0,
+        "amount": 150000.0
+      }
+    ],
+    "subtotal": 450000.0,
+    "tax": 0.0,
+    "total": 450000.0,
+    "iban": "PK61MEZN8730567906725660"
+  },
+  "14_shan_packages_SP-4722.pdf": {
+    "vendor_name": "Shan Packages",
+    "ntn": "3706410-2",
+    "strn": "8487450719974",
+    "invoice_no": "SP-4722",
+    "invoice_date": "2026-09-29",
+    "due_date": "2026-10-14",
+    "line_items": [
+      {
+        "name": "Poly Bags 10kg",
+        "qty": 8.0,
+        "unit_price": 2437.0,
+        "amount": 19496.0
+      },
+      {
+        "name": "Packing Tape 2in",
+        "qty": 3.0,
+        "unit_price": 5663.0,
+        "amount": 16989.0
+      },
+      {
+        "name": "Bubble Wrap Roll",
+        "qty": 5.0,
+        "unit_price": 11359.0,
+        "amount": 56795.0
+      }
+    ],
+    "subtotal": 93280.0,
+    "tax": 16790.0,
+    "total": 110070.0,
+    "iban": "PK87ABPA6650378570458323"
+  },
+  "15_haji_cold_drinks_brothers_BL-4816.pdf": {
+    "vendor_name": "Haji Cold Drinks Brothers",
+    "ntn": "8330264-4",
+    "strn": "3134858662711",
+    "invoice_no": "BL-4816",
+    "invoice_date": "2026-09-10",
+    "due_date": "2026-10-10",
+    "line_items": [
+      {
+        "name": "Lemon Lime 1.5L",
+        "qty": 7.0,
+        "unit_price": 2081.0,
+        "amount": 14567.0
+      },
+      {
+        "name": "Mineral Water 1.5L",
+        "qty": 7.0,
+        "unit_price": 843.0,
+        "amount": 5901.0
+      }
+    ],
+    "subtotal": 20468.0,
+    "tax": 3684.0,
+    "total": 24152.0,
+    "iban": "PK70HABB6974080661712892"
+  },
+  "16_hilal_cosmetics_INV-371.pdf": {
+    "vendor_name": "Hilal Cosmetics",
+    "ntn": "1425253-2",
+    "strn": "7898846769883",
+    "invoice_no": "INV-371",
+    "invoice_date": "2026-10-09",
+    "due_date": "2026-11-08",
+    "line_items": [
+      {
+        "name": "Shaving Cream",
+        "qty": 5.0,
+        "unit_price": 8368.0,
+        "amount": 41840.0
+      },
+      {
+        "name": "Floor Cleaner 1L",
+        "qty": 5.0,
+        "unit_price": 8151.0,
+        "amount": 40755.0
+      },
+      {
+        "name": "Sanitary Pads",
+        "qty": 6.0,
+        "unit_price": 7616.0,
+        "amount": 45696.0
+      },
+      {
+        "name": "Razor Pack",
+        "qty": 7.0,
+        "unit_price": 7114.0,
+        "amount": 49798.0
+      },
+      {
+        "name": "Laundry Soap Bar",
+        "qty": 14.0,
+        "unit_price": 4184.0,
+        "amount": 58576.0
+      }
+    ],
+    "subtotal": 236665.0,
+    "tax": 42600.0,
+    "total": 279265.0,
+    "iban": "PK54MEZN6372830188265146"
+  },
+  "17_usmania_personal_care_corporation_UPC-2843.pdf": {
+    "vendor_name": "Usmania Personal Care Corporation",
+    "ntn": "2785446-7",
+    "strn": "7478398651034",
+    "invoice_no": "UPC-2843",
+    "invoice_date": "2026-08-29",
+    "due_date": "2026-10-13",
+    "line_items": [
+      {
+        "name": "Face Cream 50g",
+        "qty": 3.0,
+        "unit_price": 13545.0,
+        "amount": 40635.0
+      },
+      {
+        "name": "Shaving Cream",
+        "qty": 7.0,
+        "unit_price": 8598.0,
+        "amount": 60186.0
+      }
+    ],
+    "subtotal": 100821.0,
+    "tax": 18148.0,
+    "total": 118969.0,
+    "iban": "PK26MEZN0262905488566514"
+  },
+  "18_lahore_carriage_services_BL-403.pdf": {
+    "vendor_name": "Lahore Carriage Services",
+    "ntn": null,
+    "strn": null,
+    "invoice_no": "BL-403",
+    "invoice_date": "2026-09-18",
+    "due_date": "2026-10-18",
+    "line_items": [
+      {
+        "name": "Mazda Truck Rental",
+        "qty": 2.0,
+        "unit_price": 11858.0,
+        "amount": 23716.0
+      }
+    ],
+    "subtotal": 23716.0,
+    "tax": 0.0,
+    "total": 23716.0,
+    "iban": "PK54MEZN3202824385390110"
+  },
+  "19_ghani_packaging_industries___co_3684.pdf": {
+    "vendor_name": "Ghani Packaging Industries & Co.",
+    "ntn": "1486488-8",
+    "strn": "9698268172111",
+    "invoice_no": "3684",
+    "invoice_date": "2026-08-25",
+    "due_date": "2026-10-09",
+    "line_items": [
+      {
+        "name": "Packing Tape 2in",
+        "qty": 9.0,
+        "unit_price": 5309.0,
+        "amount": 47781.0
+      },
+      {
+        "name": "Carton Sealing Machine Service",
+        "qty": 1.0,
+        "unit_price": 9585.0,
+        "amount": 9585.0
+      }
+    ],
+    "subtotal": 57366.0,
+    "tax": 10326.0,
+    "total": 67692.0,
+    "iban": "PK41HABB0028264040455275"
+  },
+  "20_royal_pulses_traders_2402.pdf": {
+    "vendor_name": "Royal Pulses Traders",
+    "ntn": "6816616-7",
+    "strn": "2590123756564",
+    "invoice_no": "2402",
+    "invoice_date": "2026-09-25",
+    "due_date": "2026-10-10",
+    "line_items": [
+      {
+        "name": "Sugar 50kg",
+        "qty": 12.0,
+        "unit_price": 8901.0,
+        "amount": 106812.0
+      },
+      {
+        "name": "Gram Flour 1kg",
+        "qty": 4.0,
+        "unit_price": 4834.0,
+        "amount": 19336.0
+      },
+      {
+        "name": "Vermicelli 150g",
+        "qty": 3.0,
+        "unit_price": 3557.0,
+        "amount": 10671.0
+      },
+      {
+        "name": "Sella Rice 25kg",
+        "qty": 17.0,
+        "unit_price": 9376.0,
+        "amount": 159392.0
+      }
+    ],
+    "subtotal": 296211.0,
+    "tax": 53318.0,
+    "total": 349529.0,
+    "iban": "PK68MEZN4367091151723591"
+  },
+  "21_al_fazal_food_industries_brothers_AFF-2970.pdf": {
+    "vendor_name": "Al-Fazal Food Industries Brothers",
+    "ntn": "9821956-3",
+    "strn": "4018075814996",
+    "invoice_no": "AFF-2970",
+    "invoice_date": "2026-09-12",
+    "due_date": "2026-10-12",
+    "line_items": [
+      {
+        "name": "Cake Slices",
+        "qty": 8.0,
+        "unit_price": 2602.0,
+        "amount": 20816.0
+      },
+      {
+        "name": "Biscuits Family Pack",
+        "qty": 5.0,
+        "unit_price": 3639.0,
+        "amount": 18195.0
+      },
+      {
+        "name": "Mayonnaise 1L",
+        "qty": 4.0,
+        "unit_price": 9193.0,
+        "amount": 36772.0
+      }
+    ],
+    "subtotal": 75783.0,
+    "tax": 13641.0,
+    "total": 89424.0,
+    "iban": "PK48MEZN6300962209172328"
+  },
+  "22_usmania_security_services_enterprises_INV-387.pdf": {
+    "vendor_name": "Usmania Security Services Enterprises",
+    "ntn": null,
+    "strn": null,
+    "invoice_no": "INV-387",
+    "invoice_date": "2026-08-31",
+    "due_date": "2026-10-15",
+    "line_items": [
+      {
+        "name": "Cold Room Repair",
+        "qty": 1.0,
+        "unit_price": 50388.0,
+        "amount": 50388.0
+      },
+      {
+        "name": "LED Tube Lights",
+        "qty": 4.0,
+        "unit_price": 10587.0,
+        "amount": 42348.0
+      }
+    ],
+    "subtotal": 92736.0,
+    "tax": 0.0,
+    "total": 92736.0,
+    "iban": "PK05MUCB8460707182130153"
+  },
+  "23_haji_flour_mills_corporation_HFM-02151.pdf": {
+    "vendor_name": "Haji Flour Mills Corporation",
+    "ntn": "9987485-2",
+    "strn": "2723856722431",
+    "invoice_no": "HFM/02151",
+    "invoice_date": "2026-10-01",
+    "due_date": "2026-10-16",
+    "line_items": [
+      {
+        "name": "Brown Sugar 1kg",
+        "qty": 3.0,
+        "unit_price": 5276.0,
+        "amount": 15828.0
+      }
+    ],
+    "subtotal": 15828.0,
+    "tax": 2849.0,
+    "total": 18677.0,
+    "iban": "PK31HABB9530650758750229"
+  },
+  "24_noor_cleaning_services_INV-1999.pdf": {
+    "vendor_name": "Noor Cleaning Services",
+    "ntn": null,
+    "strn": null,
+    "invoice_no": "INV-1999",
+    "invoice_date": "2026-09-01",
+    "due_date": "2026-10-16",
+    "line_items": [
+      {
+        "name": "Office Cleaning Monthly",
+        "qty": 1.0,
+        "unit_price": 56001.0,
+        "amount": 56001.0
+      },
+      {
+        "name": "Night Watchman Monthly",
+        "qty": 1.0,
+        "unit_price": 37824.0,
+        "amount": 37824.0
+      }
+    ],
+    "subtotal": 93825.0,
+    "tax": 0.0,
+    "total": 93825.0,
+    "iban": "PK02MUCB2126378753924475"
+  },
+  "25_al_noor_traders_1299.pdf": {
+    "vendor_name": "Al-Noor Traders",
+    "ntn": "1486870-7",
+    "strn": "6729075914997",
+    "invoice_no": "1299",
+    "invoice_date": "2026-08-31",
+    "due_date": "2026-10-15",
+    "line_items": [
+      {
+        "name": "Turmeric Powder 1kg",
+        "qty": 26.0,
+        "unit_price": 13458.0,
+        "amount": 349908.0
+      },
+      {
+        "name": "Basmati Rice 25kg",
+        "qty": 8.0,
+        "unit_price": 11043.0,
+        "amount": 88344.0
+      },
+      {
+        "name": "Sugar 50kg",
+        "qty": 10.0,
+        "unit_price": 8465.0,
+        "amount": 84650.0
+      },
+      {
+        "name": "Biryani Masala 50g",
+        "qty": 11.0,
+        "unit_price": 7646.0,
+        "amount": 84106.0
+      },
+      {
+        "name": "Brown Sugar 1kg",
+        "qty": 13.0,
+        "unit_price": 4827.0,
+        "amount": 62751.0
+      }
+    ],
+    "subtotal": 669759.0,
+    "tax": 120557.0,
+    "total": 790316.0,
+    "iban": "PK31ABPA2695993205391207"
+  },
+  "26_punjab_packaging_industries_BL-4353.pdf": {
+    "vendor_name": "Punjab Packaging Industries",
+    "ntn": "7598189-0",
+    "strn": "4528361183189",
+    "invoice_no": "BL-4353",
+    "invoice_date": "2026-08-31",
+    "due_date": "2026-10-15",
+    "line_items": [
+      {
+        "name": "Carton Sealing Machine Service",
+        "qty": 1.0,
+        "unit_price": 9359.0,
+        "amount": 9359.0
+      },
+      {
+        "name": "Plastic Pallet",
+        "qty": 1.0,
+        "unit_price": 7585.0,
+        "amount": 7585.0
+      }
+    ],
+    "subtotal": 16944.0,
+    "tax": 3050.0,
+    "total": 19994.0,
+    "iban": "PK79MUCB3453240493171118"
+  },
+  "27_al_hamd_soap_works_AHS-03556.pdf": {
+    "vendor_name": "Al-Hamd Soap Works",
+    "ntn": "3038932-5",
+    "strn": "2083605177896",
+    "invoice_no": "AHS/03556",
+    "invoice_date": "2026-09-17",
+    "due_date": "2026-10-17",
+    "line_items": [
+      {
+        "name": "Tissue Box",
+        "qty": 16.0,
+        "unit_price": 5820.0,
+        "amount": 93120.0
+      },
+      {
+        "name": "Shampoo Sachet",
+        "qty": 10.0,
+        "unit_price": 3012.0,
+        "amount": 30120.0
+      },
+      {
+        "name": "Hand Wash 250ml",
+        "qty": 12.0,
+        "unit_price": 7641.0,
+        "amount": 91692.0
+      },
+      {
+        "name": "Sanitary Pads",
+        "qty": 7.0,
+        "unit_price": 7838.0,
+        "amount": 54866.0
+      }
+    ],
+    "subtotal": 269798.0,
+    "tax": 48564.0,
+    "total": 318362.0,
+    "iban": "PK24ABPA3521458386075343"
+  },
+  "28_hilal_carriage_services_enterprises_BL-149.pdf": {
+    "vendor_name": "Hilal Carriage Services Enterprises",
+    "ntn": null,
+    "strn": null,
+    "invoice_no": "BL-149",
+    "invoice_date": "2026-08-25",
+    "due_date": "2026-10-09",
+    "line_items": [
+      {
+        "name": "Loading/Unloading Labour",
+        "qty": 2.0,
+        "unit_price": 5269.0,
+        "amount": 10538.0
+      },
+      {
+        "name": "Container Shifting",
+        "qty": 1.0,
+        "unit_price": 18348.0,
+        "amount": 18348.0
+      }
+    ],
+    "subtotal": 28886.0,
+    "tax": 0.0,
+    "total": 28886.0,
+    "iban": "PK05MEZN3158562743260999"
+  },
+  "29_star_cosmetics_4484.pdf": {
+    "vendor_name": "Star Cosmetics",
+    "ntn": "5626007-6",
+    "strn": "5796228332124",
+    "invoice_no": "4484",
+    "invoice_date": "2026-10-02",
+    "due_date": "2026-10-17",
+    "line_items": [
+      {
+        "name": "Bath Soap 100g",
+        "qty": 2.0,
+        "unit_price": 7544.0,
+        "amount": 15088.0
+      },
+      {
+        "name": "Toothpaste 100g",
+        "qty": 4.0,
+        "unit_price": 8781.0,
+        "amount": 35124.0
+      },
+      {
+        "name": "Baby Diapers Medium",
+        "qty": 8.0,
+        "unit_price": 3135.0,
+        "amount": 25080.0
+      },
+      {
+        "name": "Detergent Powder 1kg",
+        "qty": 3.0,
+        "unit_price": 5967.0,
+        "amount": 17901.0
+      }
+    ],
+    "subtotal": 93193.0,
+    "tax": 16775.0,
+    "total": 109968.0,
+    "iban": "PK96MUCB1358376294199099"
+  },
+  "30_data_oil_mills_DOM-1078.pdf": {
+    "vendor_name": "Data Oil Mills",
+    "ntn": "2068096-3",
+    "strn": "9490525572354",
+    "invoice_no": "DOM-1078",
+    "invoice_date": "2026-09-16",
+    "due_date": "2026-10-16",
+    "line_items": [
+      {
+        "name": "Banaspati Ghee 1kg",
+        "qty": 7.0,
+        "unit_price": 9779.0,
+        "amount": 68453.0
+      },
+      {
+        "name": "Cooking Oil 5L Tin",
+        "qty": 12.0,
+        "unit_price": 4341.0,
+        "amount": 52092.0
+      }
+    ],
+    "subtotal": 120545.0,
+    "tax": 21698.0,
+    "total": 142243.0,
+    "iban": "PK11MEZN1991353720351800"
+  },
+  "31_al_barkat_milk_supply_BL-2259.pdf": {
+    "vendor_name": "Al-Barkat Milk Supply",
+    "ntn": "7476822-6",
+    "strn": "7748535287715",
+    "invoice_no": "BL-2259",
+    "invoice_date": "2026-08-31",
+    "due_date": "2026-10-15",
+    "line_items": [
+      {
+        "name": "Fresh Milk 1L Pack",
+        "qty": 6.0,
+        "unit_price": 4605.0,
+        "amount": 27630.0
+      },
+      {
+        "name": "Yogurt 1kg",
+        "qty": 3.0,
+        "unit_price": 3348.0,
+        "amount": 10044.0
+      }
+    ],
+    "subtotal": 37674.0,
+    "tax": 6781.0,
+    "total": 44455.0,
+    "iban": "PK30MEZN4949075227660590"
+  },
+  "32_al_makkah_packages_4582.pdf": {
+    "vendor_name": "Al-Makkah Packages",
+    "ntn": "7226965-2",
+    "strn": "7158525146312",
+    "invoice_no": "4582",
+    "invoice_date": "2026-09-12",
+    "due_date": "2026-10-12",
+    "line_items": [
+      {
+        "name": "Pallet Truck",
+        "qty": 2.0,
+        "unit_price": 90179.0,
+        "amount": 180358.0
+      },
+      {
+        "name": "Jute Bags",
+        "qty": 7.0,
+        "unit_price": 3795.0,
+        "amount": 26565.0
+      },
+      {
+        "name": "Corrugated Carton 18x12",
+        "qty": 5.0,
+        "unit_price": 7587.0,
+        "amount": 37935.0
+      },
+      {
+        "name": "Wooden Pallet",
+        "qty": 4.0,
+        "unit_price": 4722.0,
+        "amount": 18888.0
+      }
+    ],
+    "subtotal": 263746.0,
+    "tax": 47474.0,
+    "total": 311220.0,
+    "iban": "PK57UNIL1027636655125141"
+  },
+  "33_lahore_beverages_enterprises_2126.pdf": {
+    "vendor_name": "Lahore Beverages Enterprises",
+    "ntn": "1142249-5",
+    "strn": "5254488308018",
+    "invoice_no": "2126",
+    "invoice_date": "2026-09-18",
+    "due_date": "2026-10-18",
+    "line_items": [
+      {
+        "name": "Instant Coffee 100g",
+        "qty": 1.0,
+        "unit_price": 23751.0,
+        "amount": 23751.0
+      },
+      {
+        "name": "Mango Juice 200ml",
+        "qty": 3.0,
+        "unit_price": 1944.0,
+        "amount": 5832.0
+      }
+    ],
+    "subtotal": 29583.0,
+    "tax": 5325.0,
+    "total": 34908.0,
+    "iban": "PK56MUCB5709346608694648"
+  },
+  "34_madina_dairies_4174.pdf": {
+    "vendor_name": "Madina Dairies",
+    "ntn": "6064051-7",
+    "strn": "7733168012611",
+    "invoice_no": "4174",
+    "invoice_date": "2026-09-10",
+    "due_date": "2026-10-10",
+    "line_items": [
+      {
+        "name": "Yogurt 1kg",
+        "qty": 7.0,
+        "unit_price": 3146.0,
+        "amount": 22022.0
+      },
+      {
+        "name": "Flavoured Milk 225ml",
+        "qty": 11.0,
+        "unit_price": 3721.0,
+        "amount": 40931.0
+      },
+      {
+        "name": "Cream 200ml",
+        "qty": 4.0,
+        "unit_price": 5708.0,
+        "amount": 22832.0
+      },
+      {
+        "name": "Lassi 300ml",
+        "qty": 8.0,
+        "unit_price": 2801.0,
+        "amount": 22408.0
+      },
+      {
+        "name": "Desi Ghee 1kg",
+        "qty": 13.0,
+        "unit_price": 25289.0,
+        "amount": 328757.0
+      }
+    ],
+    "subtotal": 436950.0,
+    "tax": 78651.0,
+    "total": 515601.0,
+    "iban": "PK42MUCB9534263533930350"
+  },
+  "35_ravi_goods_transport_RGT-01718.pdf": {
+    "vendor_name": "Ravi Goods Transport",
+    "ntn": null,
+    "strn": null,
+    "invoice_no": "RGT/01718",
+    "invoice_date": "2026-10-07",
+    "due_date": "2026-10-10",
+    "line_items": [
+      {
+        "name": "Freight Lahore-Islamabad",
+        "qty": 5.0,
+        "unit_price": 75743.0,
+        "amount": 378715.0
+      },
+      {
+        "name": "Vehicle Service",
+        "qty": 5.0,
+        "unit_price": 21274.0,
+        "amount": 106370.0
+      }
+    ],
+    "subtotal": 485085.0,
+    "tax": 0.0,
+    "total": 485085.0,
+    "iban": "PK57HABB2880277950811660"
+  },
+  "36_al_hamd_cosmetics_INV-3394.pdf": {
+    "vendor_name": "Al-Hamd Cosmetics",
+    "ntn": "2297414-4",
+    "strn": "6530929703619",
+    "invoice_no": "INV-3394",
+    "invoice_date": "2026-08-31",
+    "due_date": "2026-10-15",
+    "line_items": [
+      {
+        "name": "Toothpaste 100g",
+        "qty": 8.0,
+        "unit_price": 8682.0,
+        "amount": 69456.0
+      }
+    ],
+    "subtotal": 69456.0,
+    "tax": 12502.0,
+    "total": 81958.0,
+    "iban": "PK89ABPA1827940349959448"
+  },
+  "37_sitara_snacks_brothers_INV-2848.pdf": {
+    "vendor_name": "Sitara Snacks Brothers",
+    "ntn": "1099150-5",
+    "strn": "2691351376991",
+    "invoice_no": "INV-2848",
+    "invoice_date": "2026-09-14",
+    "due_date": "2026-10-14",
+    "line_items": [
+      {
+        "name": "Biscuits Family Pack",
+        "qty": 6.0,
+        "unit_price": 3397.0,
+        "amount": 20382.0
+      },
+      {
+        "name": "Jam 440g",
+        "qty": 10.0,
+        "unit_price": 6582.0,
+        "amount": 65820.0
+      }
+    ],
+    "subtotal": 86202.0,
+    "tax": 15516.0,
+    "total": 101718.0,
+    "iban": "PK77MUCB0095800811562464"
+  },
+  "38_madina_dairies_04159.pdf": {
+    "vendor_name": "Madina Dairies",
+    "ntn": "6064051-7",
+    "strn": "7733168012611",
+    "invoice_no": "04159",
+    "invoice_date": "2026-09-12",
+    "due_date": "2026-10-12",
+    "line_items": [
+      {
+        "name": "Yogurt 1kg",
+        "qty": 16.0,
+        "unit_price": 3120.0,
+        "amount": 49920.0
+      },
+      {
+        "name": "Milk Powder 400g",
+        "qty": 17.0,
+        "unit_price": 20109.0,
+        "amount": 341853.0
+      },
+      {
+        "name": "Cheese Slices 200g",
+        "qty": 7.0,
+        "unit_price": 15061.0,
+        "amount": 105427.0
+      },
+      {
+        "name": "Cream 200ml",
+        "qty": 22.0,
+        "unit_price": 5664.0,
+        "amount": 124608.0
+      }
+    ],
+    "subtotal": 621808.0,
+    "tax": 111925.0,
+    "total": 733733.0,
+    "iban": "PK42MUCB9534263533930350"
+  },
+  "39_punjab_dairies_INV-3340.pdf": {
+    "vendor_name": "Punjab Dairies",
+    "ntn": "2840209-5",
+    "strn": "4396283677337",
+    "invoice_no": "INV-3340",
+    "invoice_date": "2026-08-29",
+    "due_date": "2026-10-13",
+    "line_items": [
+      {
+        "name": "Cream 200ml",
+        "qty": 56.0,
+        "unit_price": 5485.0,
+        "amount": 307160.0
+      },
+      {
+        "name": "Lassi 300ml",
+        "qty": 37.0,
+        "unit_price": 2711.0,
+        "amount": 100307.0
+      },
+      {
+        "name": "UHT Milk 250ml",
+        "qty": 37.0,
+        "unit_price": 3188.0,
+        "amount": 117956.0
+      }
+    ],
+    "subtotal": 525423.0,
+    "tax": 94576.0,
+    "total": 619999.0,
+    "iban": "PK80MUCB0607054943785784"
+  },
+  "40_al_rehman_foods__pvt__ltd_ARF-01505.pdf": {
+    "vendor_name": "Al-Rehman Foods (Pvt) Ltd",
+    "ntn": "6877772-3",
+    "strn": "1961475556307",
+    "invoice_no": "ARF/01505",
+    "invoice_date": "2026-08-29",
+    "due_date": "2026-10-13",
+    "line_items": [
+      {
+        "name": "Noodles Masala 65g",
+        "qty": 9.0,
+        "unit_price": 3117.0,
+        "amount": 28053.0
+      },
+      {
+        "name": "Potato Chips 50g",
+        "qty": 8.0,
+        "unit_price": 2413.0,
+        "amount": 19304.0
+      },
+      {
+        "name": "Cake Slices",
+        "qty": 19.0,
+        "unit_price": 2147.0,
+        "amount": 40793.0
+      }
+    ],
+    "subtotal": 88150.0,
+    "tax": 15867.0,
+    "total": 104017.0,
+    "iban": "PK67UNIL1181875122321309"
+  }
+}

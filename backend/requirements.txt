@@ -1,0 +1,23 @@
+# Runtime (Python 3.11). CPU-only XGBoost keeps the image small (no CUDA/NCCL).
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.0
+pydantic-settings==2.15.0
+SQLAlchemy==2.1.4
+psycopg[binary]==3.3.6
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
+python-multipart==0.0.32
+httpx==0.28.1
+numpy==2.4.6
+pandas==3.0.6
+scikit-learn==1.9.1
+xgboost-cpu==3.2.0
+joblib==1.6.0
+networkx==3.6.1
+RapidFuzz==3.14.6
+Faker==40.41.0
+reportlab==5.0.1
+pypdf==6.20.0
+pytesseract==0.3.13
+pillow==12.3.0
