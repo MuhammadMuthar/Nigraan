@@ -1,0 +1,8 @@
+**/__pycache__
+**/*.pyc
+backend/nigraan.db*
+backend/data_out
+backend/.pytest_cache
+frontend
+.git
+docs/*.png

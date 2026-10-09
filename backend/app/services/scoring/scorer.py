@@ -28,7 +28,7 @@ FEATURE_TYPE = {
     "days_since_bank_change": "F2", "account_changed": "F2", "first_payment_to_account": "F2",
     "changer_prior_edits": "F2", "changer_edit_share": "F2", "change_unverified": "F2",
     "unit_price_vs_median_max": "F4", "unit_price_vs_vendor_last": "F4", "same_payee_48h": "F5", "same_payee_48h_vs_limit": "F5", "limit_gap": "F5",
-    "is_night": "F7", "off_day": "F7", "creator_can_approve": "F7", "entry_hour": "F7",
+    "is_night": "F7", "off_day": "F7", "creator_can_approve": "F7", "entry_hour": "F7", "days_since_invoice_date": "F7",
     "vague_line_share": "F3", "is_round_amount": "F3", "vendor_round_share": "F3", "no_sales_tax": "F3",
     "vendor_age_days": "F3", "vendor_prior_invoices": "F3",
 }
@@ -117,7 +117,7 @@ class Scorer:
                       "ms": round((time.perf_counter() - t0) * 1000, 1),
                       "detail": "; ".join(h.code for h in rr.hits) or "no rule fired"})
 
-        trace.append({"step": "features", "label": "Behaviour features (26, leakage-safe)", "ms": round(feat_ms, 1),
+        trace.append({"step": "features", "label": f"Behaviour features ({len(FEATURES)}, leakage-safe)", "ms": round(feat_ms, 1),
                       "detail": "amount vs vendor median, bank change age, approval-limit gap, entry time, ..."})
         names = FEATURES
         contribs = {names[j]: float(contrib[j]) for j in range(len(names))}
@@ -191,9 +191,9 @@ class Scorer:
                 ftype = "F5"
             elif gr.signal >= 0.7:
                 ftype = "F3"
-            else:
+            else:  # family of the model's top-3 drivers
                 agg: dict[str, float] = {}
-                for name, c in contribs.items():
+                for name, c in sorted(contribs.items(), key=lambda kv: -kv[1])[:3]:
                     t = FEATURE_TYPE.get(name)
                     if t and c > 0:
                         agg[t] = agg.get(t, 0) + c

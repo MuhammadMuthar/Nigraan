@@ -2,7 +2,8 @@ import os
 import tempfile
 
 _tmp = tempfile.mkdtemp(prefix="nigraan-test-")
-os.environ["DATABASE_URL"] = f"sqlite:///{_tmp}/test.db"
+# TEST_DATABASE_URL=postgresql://... runs the same suite against Postgres
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", f"sqlite:///{_tmp}/test.db")
 os.environ["DEMO_MODE"] = "true"
 os.environ["AUTO_SEED"] = "true"
 os.environ["JWT_SECRET"] = "test-secret"

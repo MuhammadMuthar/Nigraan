@@ -1,5 +1,6 @@
 # Build from the repo root:  docker build -f backend/Dockerfile -t nigraan-api .
-FROM python:3.11-slim
+ARG BASE_IMAGE=python:3.11-slim
+FROM ${BASE_IMAGE}
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 RUN apt-get update \
