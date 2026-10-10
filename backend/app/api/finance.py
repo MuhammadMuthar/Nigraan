@@ -44,7 +44,10 @@ async def upload_invoice(file: UploadFile = File(...), db: Session = Depends(get
 @router.post("/invoices/import", tags=["invoices"])
 async def import_invoices(file: UploadFile = File(...), db: Session = Depends(get_db),
                           user: User = Depends(require_roles("accountant", "owner"))):
-    text = (await file.read()).decode("utf-8-sig")
+    try:
+        text = (await file.read()).decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise ApiError(422, "bad_csv", "CSV must be UTF-8 encoded. Export it as UTF-8 CSV and retry.", "file")
     rows = import_csv(db, text, user)
     audit(db, user, "import_invoices", "invoice", None, count=len(rows))
     db.commit()
@@ -64,6 +67,23 @@ def patch_invoice(invoice_id: int, body: InvoicePatch, db: Session = Depends(get
     inv = db.get(Invoice, invoice_id) or _404("invoice")
     if inv.status not in ("draft", "received"):
         raise ApiError(409, "locked", "Invoice is already in a payment run")
+    amounts = {f: rupees_to_paisa(str(getattr(body, f))) if getattr(body, f) is not None else int(getattr(inv, f))
+               for f in ("subtotal", "tax", "total")}
+    if body.confirm or any(getattr(body, f) is not None for f in amounts):
+        if any(v < 0 for v in amounts.values()) or amounts["subtotal"] + amounts["tax"] != amounts["total"]:
+            raise ApiError(422, "amount_mismatch", "Subtotal plus tax must equal the nonnegative invoice total", "total")
+    if body.lines is not None and sum(rupees_to_paisa(str(l.amount)) for l in body.lines) != amounts["subtotal"]:
+        raise ApiError(422, "lines_mismatch", "Line amounts must add up to the invoice subtotal", "lines")
+    if body.vendor_id is not None:
+        from app.models import Vendor
+
+        if db.get(Vendor, body.vendor_id) is None:
+            raise ApiError(422, "invalid_vendor", "Choose an existing vendor", "vendor_id")
+    if body.confirm and inv.status == "draft":
+        fields = (inv.extraction_json or {}).get("fields", {})
+        for f in ("invoice_no", "invoice_date", "total"):
+            if inv.extraction_json and fields.get(f) in (None, "") and getattr(body, f) is None:
+                raise ApiError(422, "field_required", f"Enter the missing {f.replace('_', ' ')} before confirming", f)
     changed = {}
     for f in ("vendor_id", "invoice_no", "invoice_date", "due_date"):
         v = getattr(body, f)
@@ -75,8 +95,8 @@ def patch_invoice(invoice_id: int, body: InvoicePatch, db: Session = Depends(get
     for f in ("subtotal", "tax", "total"):
         v = getattr(body, f)
         if v is not None:
-            changed[f] = v
-            setattr(inv, f, rupees_to_paisa(str(v)))
+            changed[f] = str(v)
+            setattr(inv, f, amounts[f])
     if body.lines is not None:
         for l in list(inv.lines):
             db.delete(l)
@@ -100,13 +120,21 @@ def patch_invoice(invoice_id: int, body: InvoicePatch, db: Session = Depends(get
 def score_invoice(invoice_id: int, db: Session = Depends(get_db),
                   user: User = Depends(require_roles("accountant", "approver", "owner"))):
     """Adds the invoice to the open payment run (creating one if needed) and scores the line."""
-    inv = db.get(Invoice, invoice_id) or _404("invoice")
+    inv = db.execute(select(Invoice).where(Invoice.id == invoice_id).with_for_update()).scalars().first() or _404("invoice")
+    if inv.status == "draft":
+        raise ApiError(409, "confirmation_required", "Review and confirm the extracted fields before scoring", "confirm")
+    if inv.status in ("paid", "rejected"):
+        raise ApiError(409, "invoice_not_open", "A paid or rejected invoice cannot be scheduled again", "invoice_id")
     if inv.vendor_id is None:
         raise ApiError(422, "vendor_required", "Match the invoice to a vendor first", "vendor_id")
-    if inv.status == "draft":
-        inv.status = "received"
     p = db.execute(select(Payment).where(Payment.invoice_id == inv.id)).scalars().first()
+    if p is not None and (p.status in ("released", "exported", "rejected") or p.run is None or p.run.status != "open"):
+        raise ApiError(409, "invoice_not_open", "This invoice already belongs to a completed payment run", "invoice_id")
     if p is None:
+        if inv.status != "received":
+            raise ApiError(409, "invoice_not_open", "Only a confirmed, open invoice can be scheduled", "invoice_id")
+        if inv.total < 0:
+            raise ApiError(422, "invalid_amount", "Invoice total must be nonnegative", "total")
         from app.services.payment_runs import active_account
 
         company = db.execute(select(Company)).scalars().first()

@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import {
-  ChevronDown, Menu, ShieldCheck, Brain, ClipboardList, Eye, FileUp, LayoutDashboard, Loader2, LogOut, RotateCcw, ShieldAlert, Users, Wallet, CalendarPlus,
+  ChevronDown, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, Brain, ClipboardList, Eye, FileUp, LayoutDashboard, Loader2, LogOut, RotateCcw, ShieldAlert, Users, Wallet, CalendarPlus,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { ROLE_LABEL, useAuth } from "@/lib/auth";
@@ -26,11 +26,27 @@ const NAV = [
 
 type DemoStatus = { demo_mode: boolean; open_run_id: number | null; model_version: string; gemini: boolean; as_of: string | null };
 
+const SIDEBAR_KEY = "nigraan.sidebar-collapsed";
+function sidebarSnapshot() {
+  try { return window.localStorage.getItem(SIDEBAR_KEY) === "true"; } catch { return false; }
+}
+function subscribeSidebar(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("nigraan-sidebar", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("nigraan-sidebar", callback);
+  };
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, ready, logout } = useAuth();
   const router = useRouter();
   const path = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  const savedCollapsed = useSyncExternalStore(subscribeSidebar, sidebarSnapshot, () => false);
+  const [collapseOverride, setCollapseOverride] = useState<boolean | null>(null);
+  const collapsed = collapseOverride ?? savedCollapsed;
   const [demo, setDemo] = useState<DemoStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -81,16 +97,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const navigation = (
+  function toggleSidebar() {
+    const next = !collapsed;
+    setCollapseOverride(next);
+    try { window.localStorage.setItem(SIDEBAR_KEY, String(next)); } catch { /* Navigation still works without storage. */ }
+    window.dispatchEvent(new Event("nigraan-sidebar"));
+  }
+
+  const navigation = (compact = false) => (
     <nav aria-label="Main navigation" className="flex flex-col gap-1.5">
       {NAV.map(({ href, label, Icon }) => {
         const active = path === href || path?.startsWith(`${href}/`);
-        return <Link key={href} href={href} onClick={() => setNavOpen(false)} aria-current={active ? "page" : undefined}
-          className={cn("flex items-center gap-3 rounded-xl border border-transparent px-3 py-3 text-sm font-medium transition-colors",
+        const link = <Link key={href} href={href} onClick={() => setNavOpen(false)} aria-current={active ? "page" : undefined} aria-label={label}
+          className={cn("flex items-center gap-3 overflow-hidden rounded-xl border border-transparent px-3 py-3 text-sm font-medium transition-colors", compact && "justify-center",
             active ? "border-white/10 bg-white/10 text-white shadow-sm" : "text-slate-400 hover:bg-white/5 hover:text-white")}>
-          <Icon aria-hidden className={cn("size-[18px]", active && "text-teal-400")} />
-          {label}{active && <span aria-hidden className="ml-auto h-1.5 w-1.5 rounded-full bg-teal-400" />}
+          <Icon aria-hidden className={cn("size-[18px] shrink-0", active && "text-teal-400")} />
+          <span className={compact ? "sr-only" : "whitespace-nowrap"}>{label}</span>{active && !compact && <span aria-hidden className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-teal-400" />}
         </Link>;
+        return compact ? <Tooltip key={href} content={label}>{link}</Tooltip> : link;
       })}
     </nav>
   );
@@ -103,26 +127,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <a href="#main-content" className="fixed left-4 top-4 z-[60] -translate-y-24 rounded-lg bg-card px-4 py-2 shadow-lg focus:translate-y-0">Skip to content</a>
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-[#0B1422] px-5 py-7 lg:flex">
-        {brand}
-        <div className="mb-3 mt-10 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Workspace</div>
-        {navigation}
-        <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-slate-400">
+      <aside id="desktop-navigation" data-collapsed={collapsed} aria-label="Workspace sidebar" className={cn("sidebar-panel sticky top-0 hidden h-screen shrink-0 flex-col overflow-x-hidden overflow-y-auto bg-[#0B1422] py-5 lg:flex", collapsed ? "w-20 px-3" : "w-64 px-5")}>
+        <div className={cn("mb-5 flex", collapsed ? "justify-center" : "justify-end")}>
+          <Tooltip content={collapsed ? "Expand sidebar" : "Minimize sidebar"}>
+            <Button size="icon" variant="ghost" onClick={toggleSidebar} aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"} aria-expanded={!collapsed} aria-controls="desktop-navigation" className="size-9 text-slate-300 hover:bg-white/10 hover:text-white">
+              {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
+          </Tooltip>
+        </div>
+        {collapsed ? <Link href="/run" aria-label="Nigraan home" className="mx-auto flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#0D9488] text-white"><Eye aria-hidden className="size-5" /></Link> : brand}
+        <div aria-hidden className={cn("mb-3 mt-8 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", collapsed && "invisible px-0")}>{collapsed ? "·" : "Workspace"}</div>
+        {navigation(collapsed)}
+        {collapsed ? <Tooltip content={`Synthetic demo · model ${demo?.model_version ?? "unavailable"}`}><div className="mx-auto mt-auto pt-6 text-slate-400" tabIndex={0} aria-label={`Synthetic demonstration. Model ${demo?.model_version ?? "unavailable"}`}><ShieldCheck aria-hidden className="size-5" /></div></Tooltip> : <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-slate-400">
           <div className="mb-3 flex items-center gap-2 font-medium text-slate-200"><ShieldCheck aria-hidden className="size-4 text-teal-400" />Decision intelligence</div>
           <div className="flex items-center gap-2"><Brain aria-hidden className="size-3.5" />Model {demo?.model_version ?? "Unavailable"}</div>
-          <div className="mt-2">Document reader: {demo?.gemini ? "Gemini" : "PDF text + regex"}</div>
+          <div className="mt-2">Document reader: {demo?.gemini ? "Gemini" : "PDF text / OCR + regex"}</div>
           <div className="mt-4 border-t border-white/10 pt-3 text-[11px]">Synthetic data · fictional company<br />AICON’26 demonstration</div>
-        </div>
+        </div>}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
           <div className="flex min-h-18 items-center gap-3 px-4 md:px-8">
             <Sheet open={navOpen} onOpenChange={setNavOpen}>
               <SheetTrigger asChild><Button size="icon" variant="outline" className="shrink-0 lg:hidden" aria-label="Open navigation"><Menu /></Button></SheetTrigger>
-              <SheetContent className="max-w-xs bg-[#0B1422] p-6 text-white">
+              <SheetContent side="left" className="max-w-xs bg-[#0B1422] p-6 text-white">
                 <SheetTitle className="sr-only">Workspace navigation</SheetTitle>
                 <SheetDescription className="sr-only">Navigate Nigraan’s finance workspace.</SheetDescription>
-                <div className="mb-10 pr-8">{brand}</div>{navigation}
+                <div className="mb-10 pr-8">{brand}</div>{navigation()}
               </SheetContent>
             </Sheet>
             <div className="min-w-0">

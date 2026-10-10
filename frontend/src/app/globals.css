@@ -81,6 +81,17 @@ button, summary { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 .recharts-cartesian-axis-tick text { fill: var(--muted-foreground); }
 .recharts-tooltip-wrapper { z-index: 20; }
+.sidebar-panel { transition: width 220ms ease, padding 220ms ease; }
+@keyframes sheet-in { from { transform: translateX(var(--sheet-offset)); } to { transform: translateX(0); } }
+@keyframes sheet-out { from { transform: translateX(0); } to { transform: translateX(var(--sheet-offset)); } }
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlay-out { from { opacity: 1; } to { opacity: 0; } }
+.sheet-content { --sheet-offset: 100%; }
+.sheet-content[data-side="left"] { --sheet-offset: -100%; }
+.sheet-content[data-state="open"] { animation: sheet-in 220ms ease; }
+.sheet-content[data-state="closed"] { animation: sheet-out 180ms ease; }
+.sheet-overlay[data-state="open"] { animation: overlay-in 220ms ease; }
+.sheet-overlay[data-state="closed"] { animation: overlay-out 180ms ease; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

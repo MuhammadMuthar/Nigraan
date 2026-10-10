@@ -7,13 +7,15 @@ import { cn } from "@/lib/utils";
 export const Sheet = D.Root;
 export const SheetTrigger = D.Trigger;
 
-export function SheetContent({ className, children, ...props }: React.ComponentPropsWithoutRef<typeof D.Content>) {
+export function SheetContent({ className, children, side = "right", ...props }: React.ComponentPropsWithoutRef<typeof D.Content> & { side?: "left" | "right" }) {
   return (
     <D.Portal>
-      <D.Overlay className="fixed inset-0 z-50 bg-black/30" />
+      <D.Overlay className="sheet-overlay fixed inset-0 z-50 bg-black/30" />
       <D.Content
+        data-side={side}
         className={cn(
-          "fixed right-0 top-0 z-50 flex h-full w-full max-w-xl flex-col overflow-y-auto border-l border-border bg-card shadow-2xl",
+          "sheet-content fixed top-0 z-50 flex h-full w-full max-w-xl flex-col overflow-y-auto border-border bg-card shadow-2xl",
+          side === "left" ? "left-0 border-r" : "right-0 border-l",
           className,
         )}
         {...props}

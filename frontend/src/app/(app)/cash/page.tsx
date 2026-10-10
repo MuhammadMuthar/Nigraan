@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   Bar, CartesianGrid, ComposedChart, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis,
 } from "recharts";
-import { CalendarClock, CircleCheck, Loader2, Play, TriangleAlert, Wallet, X } from "lucide-react";
+import { CalendarClock, CircleCheck, Loader2, Play, RefreshCw, TriangleAlert, Wallet, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 import { day, dayFull, pct, rs, rsShort } from "@/lib/format";
@@ -25,7 +25,8 @@ type ScenarioRes = { base: Projection; scenario: Projection; delta: { low_point_
 const k = (p: number) => p / 100;
 
 export default function CashPage() {
-  const { data, loading, error } = useApi<Outlook>("/cash/projection");
+  const { data, loading, error, reload } = useApi<Outlook>("/cash/projection");
+  const [retrying, setRetrying] = useState(false);
   const [week, setWeek] = useState<number | null>(null);
   const [moves, setMoves] = useState<{ receivable_id: number; customer: string; amount: number; from: string; new_date: string }[]>([]);
   const [holdYellow, setHoldYellow] = useState(false);
@@ -47,8 +48,13 @@ export default function CashPage() {
     return p.days.filter((d) => d.day >= w.start && d.day <= w.end).map((d) => ({ label: day(d.day, { weekday: "short" }), inflow: k(d.inflow), outflow: -k(d.outflow), closing: k(d.closing) }));
   }, [p, focusWeek]);
 
+  async function retry() {
+    setRetrying(true);
+    try { await reload(); } finally { setRetrying(false); }
+  }
+
   if (loading && !data) return <div className="grid gap-4"><Skeleton className="h-24" /><Skeleton className="h-80" /></div>;
-  if (error || !data || !p) return <Empty icon={<Wallet />} title="Cash outlook unavailable">{error?.message}</Empty>;
+  if (error || !data || !p) return <div role="alert"><Empty icon={<Wallet />} title="Cash outlook unavailable"><p>{error?.message ?? "The projection could not be loaded."}</p><Button variant="outline" className="mt-3" disabled={retrying} onClick={retry}>{retrying ? <Loader2 className="animate-spin" /> : <RefreshCw />}Retry cash outlook</Button></Empty></div>;
 
   async function runScenario() {
     setBusy(true);
@@ -88,7 +94,11 @@ export default function CashPage() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={320}>
-            <ComposedChart data={weekly} margin={{ top: 8, right: 16, left: 8, bottom: 0 }} onClick={(e) => { const w = (e as { activePayload?: { payload: { week: number } }[] })?.activePayload?.[0]?.payload?.week; if (w) setWeek(w); }}>
+            <ComposedChart data={weekly} margin={{ top: 8, right: 16, left: 8, bottom: 0 }} onClick={(e) => {
+              const index = Number(e.activeTooltipIndex);
+              const selected = e.activeTooltipIndex !== undefined && Number.isInteger(index) ? weekly[index] : weekly.find((w) => w.label === e.activeLabel);
+              if (selected) setWeek(selected.week);
+            }}>
               <defs>
                 <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
                   <rect width="6" height="6" fill="#e6f4f2" /><line x1="0" y1="0" x2="0" y2="6" stroke="#0f766e" strokeWidth="2" />
@@ -100,7 +110,7 @@ export default function CashPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
               <YAxis tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} width={60} tickLine={false} axisLine={false} />
-              <RTooltip formatter={(v, n) => [rs(Math.abs(Number(v)) * 100), LEG[String(n)] ?? n]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+              <RTooltip formatter={(v, n) => [rs((String(n).startsWith("out_") ? Math.abs(Number(v)) : Number(v)) * 100), LEG[String(n)] ?? n]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Legend formatter={(v) => <span className="text-xs">{LEG[v] ?? v}</span>} />
               <ReferenceLine y={k(p.reserve)} stroke="#64748b" strokeDasharray="5 4" label={{ value: "Reserve", fontSize: 10, fill: "#58677b", position: "insideTopLeft" }} />
               <ReferenceLine y={0} stroke="#a1a1aa" />
@@ -128,7 +138,7 @@ export default function CashPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} width={56} tickLine={false} axisLine={false} />
-                <RTooltip formatter={(v, n) => [rs(Math.abs(Number(v)) * 100), String(n)]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <RTooltip formatter={(v, n) => [rs((n === "outflow" ? Math.abs(Number(v)) : Number(v)) * 100), DAILY_LEG[String(n)] ?? n]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                 <ReferenceLine y={k(p.reserve)} stroke="#64748b" strokeDasharray="5 4" />
                 <Bar dataKey="inflow" fill="#5eb3aa" />
                 <Bar dataKey="outflow" fill="#d4d4d8" />
@@ -232,6 +242,8 @@ const LEG: Record<string, string> = {
   in_fact: "Receipts: fact", in_estimate: "Receipts: model estimate", in_assumption: "Receipts: assumption",
   out_fact: "Payments: fact", out_assumption: "Payments: assumption", closing: "Week-end balance", low: "Lowest daily balance",
 };
+
+const DAILY_LEG: Record<string, string> = { inflow: "Receipts", outflow: "Payments", closing: "Day-end balance" };
 
 function nextWeekday(asOf: string, plus: number): string {
   const d = new Date(`${asOf}T12:00:00`);

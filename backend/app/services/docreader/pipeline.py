@@ -70,10 +70,18 @@ def extract_document(db: Session | None, filename: str, content_type: str, data:
     try:
         if is_pdf:
             txt = ocr_fallback.pdf_text(data)
-            text_raw = ocr_fallback.parse(txt) if txt.strip() else None
             src = "pdf_text"
+            if not txt.strip():
+                if ocr_fallback.pdf_ocr_available():
+                    txt = ocr_fallback.pdf_image_text(data)
+                    src = "tesseract_pdf"
+                else:
+                    text_err = "Scanned PDF OCR requires pdftoppm and Tesseract"
+                    src = None
+            text_raw = ocr_fallback.parse(txt) if txt.strip() else None
         elif ocr_fallback.ocr_available():
-            text_raw = ocr_fallback.parse(ocr_fallback.image_text(data))
+            txt = ocr_fallback.image_text(data)
+            text_raw = ocr_fallback.parse(txt) if txt.strip() else None
             src = "tesseract"
         else:
             src = None
@@ -98,7 +106,7 @@ def extract_document(db: Session | None, filename: str, content_type: str, data:
         engine, primary, secondary = ("gemini_cached" if g_cached else "gemini"), _normalise(g_raw), (
             _normalise(text_raw) if text_raw else None)
     elif text_raw:
-        engine, primary = ("pdf_text_regex" if is_pdf else "ocr_regex"), _normalise(text_raw)
+        engine, primary = ("pdf_text_regex" if src == "pdf_text" else "ocr_regex"), _normalise(text_raw)
     else:
         cached = _cache_dir() / f"{_sha(data)}.json"
         if cached.exists():
@@ -106,7 +114,8 @@ def extract_document(db: Session | None, filename: str, content_type: str, data:
             trace.append({"step": "cache", "label": "Cached extraction for a known demo file", "ms": 0.0,
                           "detail": "replayed from demo_week/extraction_cache (labelled 'cached')"})
     if primary is None:
-        raise ApiError(422, "unreadable", "Could not read this file: no text layer, OCR unavailable and Gemini not configured",
+        raise ApiError(422, "unreadable", "Could not extract readable invoice text. Upload a clear PDF or image, "
+                       "or configure Gemini for vision extraction.",
                        "file")
 
     t0 = time.perf_counter()

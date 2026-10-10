@@ -54,7 +54,7 @@ The product cannot work without the models; ML and deterministic code make every
 | Risk model | XGBoost on 27 leakage-safe behaviour features, with SHAP reasons mapped to plain English ("Bank account changed 2 hours before this payment") | Fraud is a combination of weak signals: timing, bank changes, price vs history, approval-limit gaps |
 | Anomaly detector | Isolation Forest | Unseen patterns |
 | Relationship graph | NetworkX over vendors, employees, users, bank/CNIC hashes, phones, addresses (time-valid edges) | Shell vendors share an identifier with an employee; disclosed related parties are down-weighted |
-| Fusion | `100 × max(rule, Σ w·signal)`, tuned on out-of-time folds | One explainable score, fixed bands at 40 / 75 |
+| Fusion | Weighted engine signals calibrated on out-of-time folds; hard rules can force a block | One explainable risk score, fixed bands at 40 / 75; not a probability |
 | Late-payment model | XGBoost vs logistic regression vs baseline (shipped XGBoost on validation PR-AUC) | Predicts at issue date which receivables will be paid late |
 | Cash engine | Deterministic daily engine, 13 weeks | Facts and estimates stay separate; mid-week breaches are caught |
 | Document reader | Gemini Flash with a strict JSON schema, cross-checked by PDF text/OCR + regex and validators | The LLM reads documents; deterministic agreement sets the confidence |
@@ -149,6 +149,12 @@ python -m ml.evaluate --months 11-12 --seeds 42,43,44,45,46
 ```
 
 ## Deploy
+
+For a five-minute presentation and release checks, use [the demo guide](docs/demo-guide.md). Public deployment/video links above still need verified URLs; the repository does not imply a deployed app or customer pilot.
+
+Bank export is a **demo CSV**, containing only account last four digits. It neither sends money nor confirms settlement. Exported payments remain outstanding in the cash forecast; historical `released` payments represent seeded settlements. There is no bank settlement integration.
+
+Local scanned-PDF extraction needs **Tesseract** and **Poppler (`pdftoppm`)**, included in the API Docker image. The fallback processes at most 10 pages with bounded render/OCR time. Gemini remains optional; template summaries are explicitly labelled when it is unavailable.
 
 **API on Render.**
 1. New → Blueprint → select this repo. `render.yaml` creates `nigraan-api` (Docker, `backend/Dockerfile`) and a Postgres database.

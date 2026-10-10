@@ -2,8 +2,23 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+
+def exact_money(value: Decimal) -> Decimal:
+    """Do not silently round a request or overflow an integer-paisa ledger column."""
+    paisa = value * 100
+    if not value.is_finite() or value < 0 or paisa != paisa.to_integral_value():
+        raise ValueError("Money must be finite, nonnegative and have at most two decimal places")
+    if paisa > 2**63 - 1:
+        raise ValueError("Money exceeds the supported ledger amount")
+    return value
+
+
+Money = Annotated[Decimal, AfterValidator(exact_money)]
 
 
 class LoginIn(BaseModel):
@@ -34,9 +49,9 @@ class VendorPatch(BaseModel):
 
 class LineIn(BaseModel):
     description: str
-    qty: float
-    unit_price: float = Field(description="rupees")
-    amount: float = Field(description="rupees")
+    qty: float = Field(gt=0, allow_inf_nan=False)
+    unit_price: Money = Field(description="rupees")
+    amount: Money = Field(description="rupees")
 
 
 class InvoicePatch(BaseModel):
@@ -44,9 +59,9 @@ class InvoicePatch(BaseModel):
     invoice_no: str | None = None
     invoice_date: date | None = None
     due_date: date | None = None
-    subtotal: float | None = None
-    tax: float | None = None
-    total: float | None = None
+    subtotal: Money | None = None
+    tax: Money | None = None
+    total: Money | None = None
     lines: list[LineIn] | None = None
     confirm: bool = Field(default=False, description="Accountant confirms the extracted fields")
 

@@ -151,7 +151,7 @@ export default function CasePage() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle>How the score was built</CardTitle><CardDescription>score = 100 × max(rule, Σ weight × engine signal), bands at 40 and 75</CardDescription></CardHeader>
+              <CardHeader><CardTitle>How the score was built</CardTitle><CardDescription>Weighted engine signals are calibrated to the 0–100 risk scale. Review begins at 40, blocked at 75; hard rules can force a block. This score is not a probability or an AI summary.</CardDescription></CardHeader>
               <CardContent className="grid gap-6 2xl:grid-cols-2">
                 <EngineBars contributions={s.engines.contributions} signals={s.engines.signals} />
                 <div>

@@ -138,10 +138,10 @@ class Scorer:
         score, raw, contributions = fuse(signals, rr.hit, self.b.fusion)
         decision = decision_for(score)
         w = self.b.fusion["weights"]
-        trace.append({"step": "fusion", "label": "Fusion: 100 x max(rule, " + " + ".join(
+        trace.append({"step": "fusion", "label": "Fusion: max(100 x rule, calibrated weighted signals: " + " + ".join(
             f"{w[e]:.2f}·{e}" for e in ("risk_model", "anomaly", "duplicate", "graph")) + ")",
                       "ms": round((time.perf_counter() - t0) * 1000, 2),
-                      "detail": f"raw={raw:.3f}, rule={rr.hit:.1f} -> score {score}"})
+                      "detail": f"raw={raw:.3f}, calibrated at raw {self.b.fusion['t_yellow']:.3f} -> 40 and {self.b.fusion['t_red']:.3f} -> 75; rule={rr.hit:.1f} -> score {score}"})
         trace.append({"step": "decision", "label": "Decision", "ms": 0.0,
                       "detail": {"allow": "Allow (green)", "review": "Review: second approver required (yellow)",
                                  "blocked": "Blocked: cannot be released; case opened (red)"}[decision]})
