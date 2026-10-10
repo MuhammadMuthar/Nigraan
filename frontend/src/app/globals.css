@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Dark mode is class-based (html.dark) so the user can override the system setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Nigraan design tokens: neutral palette, one accent (teal), semantic traffic lights. */
 @theme inline {
   --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
@@ -15,19 +18,43 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-sidebar: var(--sidebar);
 
   --color-allow: var(--allow);
   --color-allow-soft: var(--allow-soft);
+  --color-allow-solid: var(--allow-solid);
   --color-review: var(--review);
   --color-review-soft: var(--review-soft);
   --color-blocked: var(--blocked);
   --color-blocked-soft: var(--blocked-soft);
+  --color-blocked-solid: var(--blocked-solid);
 
   --radius-lg: 1rem;
   --radius-md: 0.75rem;
+
+  --animate-page-in: page-in 0.45s var(--ease-out-soft) both;
+  --animate-rise-in: rise-in 0.5s var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-fade-out: fade-out 0.15s ease-in both;
+  --animate-dialog-in: dialog-in 0.22s var(--ease-out-soft) both;
+  --animate-dialog-out: dialog-out 0.15s ease-in both;
+  --animate-pop-in: pop-in 0.16s var(--ease-out-soft) both;
+  --animate-pop-out: pop-out 0.12s ease-in both;
+  --animate-sheet-in-right: sheet-in-right 0.32s var(--ease-out-soft) both;
+  --animate-sheet-out-right: sheet-out-right 0.22s ease-in both;
+  --animate-sheet-in-left: sheet-in-left 0.32s var(--ease-out-soft) both;
+  --animate-sheet-out-left: sheet-out-left 0.22s ease-in both;
+  --animate-pop-badge: pop-badge 0.45s var(--ease-spring) backwards;
+  --animate-soft-pulse: soft-pulse 2.4s ease-in-out infinite;
 }
 
 :root {
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   --background: #F7F9FC;
   --foreground: #152338;
   --card: #ffffff;
@@ -38,13 +65,94 @@
   --accent: #0D9488;
   --accent-foreground: #ffffff;
   --accent-soft: #E9F6F4;
+  /* Darker teal keeps small links and labels readable on light surfaces. */
+  --accent-text: #0f766e;
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-foreground: #ffffff;
+  --sidebar: #0B1422;
 
   --allow: #15803d;
   --allow-soft: #e9f7ee;
+  --allow-solid: #15803d;
   --review: #b45309;
   --review-soft: #fdf3e2;
   --blocked: #b91c1c;
   --blocked-soft: #fdecec;
+  --blocked-solid: #b91c1c;
+
+  --shadow-card: 0 2px 8px rgba(11, 20, 34, 0.025);
+  --shadow-lift: 0 10px 30px -12px rgba(11, 20, 34, 0.18);
+  --selection-bg: #c9eae5;
+  --selection-fg: #0b1422;
+  --skeleton-shine: rgba(255, 255, 255, 0.65);
+
+  /* Chart palette: facts solid, estimates lighter, assumptions hatched */
+  --chart-in-fact: #0f766e;
+  --chart-in-estimate: #5eb3aa;
+  --chart-in-hatch-bg: #e6f4f2;
+  --chart-in-hatch-line: #0f766e;
+  --chart-out-fact: #d4d4d8;
+  --chart-out-hatch-bg: #e2e8f0;
+  --chart-out-hatch-line: #64748b;
+  --chart-line: #18181b;
+  --chart-line-muted: #64748b;
+  --chart-zero: #a1a1aa;
+  --chart-cursor: rgba(15, 23, 42, 0.05);
+  --graph-bg: #fbfbfc;
+  --graph-dot: #e5e9f0;
+
+  color-scheme: light;
+}
+
+/* Dark theme: deep navy surfaces, brighter semantic colours so they keep their meaning. */
+.dark {
+  --background: #0A111D;
+  --foreground: #E4EBF5;
+  --card: #101A2A;
+  --muted: #172336;
+  --muted-foreground: #93A3B9;
+  --border: #22314A;
+  --ring: #2DD4BF;
+  --accent: #2DD4BF;
+  --accent-foreground: #042F2E;
+  --accent-soft: #0E2B2E;
+  --accent-text: #5EEAD4;
+  --primary: #14B8A6;
+  --primary-hover: #2DD4BF;
+  --primary-foreground: #04201D;
+  --sidebar: #060B14;
+
+  --allow: #4ADE80;
+  --allow-soft: #0F2A1E;
+  --allow-solid: #15803D;
+  --review: #FBBF24;
+  --review-soft: #2B2112;
+  --blocked: #F87171;
+  --blocked-soft: #33161A;
+  --blocked-solid: #DC2626;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lift: 0 14px 34px -14px rgba(0, 0, 0, 0.7);
+  --selection-bg: #134E4A;
+  --selection-fg: #F0FDFA;
+  --skeleton-shine: rgba(255, 255, 255, 0.05);
+
+  --chart-in-fact: #2DD4BF;
+  --chart-in-estimate: #138A80;
+  --chart-in-hatch-bg: #0E2B2E;
+  --chart-in-hatch-line: #2DD4BF;
+  --chart-out-fact: #475569;
+  --chart-out-hatch-bg: #1A2638;
+  --chart-out-hatch-line: #94A3B8;
+  --chart-line: #E2E8F0;
+  --chart-line-muted: #94A3B8;
+  --chart-zero: #475569;
+  --chart-cursor: rgba(148, 163, 184, 0.08);
+  --graph-bg: #0D1626;
+  --graph-dot: #1B2840;
+
+  color-scheme: dark;
 }
 
 body {
@@ -72,23 +180,123 @@ body {
 
 /* Shared interaction and readability defaults, including non-button controls. */
 body { line-height: 1.5; }
-::selection { background: #c9eae5; color: #0b1422; }
+::selection { background: var(--selection-bg); color: var(--selection-fg); }
 :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
-  outline: 2px solid #0d9488;
+  outline: 2px solid var(--ring);
   outline-offset: 4px;
 }
 button, summary { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 .recharts-cartesian-axis-tick text { fill: var(--muted-foreground); }
+.recharts-legend-item-text { color: var(--muted-foreground) !important; }
 .recharts-tooltip-wrapper { z-index: 20; }
+.recharts-default-tooltip { box-shadow: var(--shadow-lift); }
+
+.text-accent { color: var(--accent-text); }
+
+/* ---------- Motion ---------- */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dialog-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scale(0.97); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scale(0.96); }
+}
+@keyframes sheet-in-right { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes sheet-out-right { from { transform: none; } to { transform: translateX(100%); } }
+@keyframes sheet-in-left { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes sheet-out-left { from { transform: none; } to { transform: translateX(-100%); } }
+/* Uses the `scale` property so it composes with an inline transform (the floating button's position). */
+@keyframes pop-badge {
+  from { opacity: 0; scale: 0.4; }
+  to { opacity: 1; scale: 1; }
+}
+@keyframes soft-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--blocked) 45%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blocked) 0%, transparent); }
+}
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes gauge-sweep { from { stroke-dasharray: 0 400; } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes progress-slide {
+  0% { transform: translateX(-100%) scaleX(0.3); }
+  50% { transform: translateX(10%) scaleX(0.6); }
+  100% { transform: translateX(100%) scaleX(0.3); }
+}
+
+/* Children enter one after another (cards, stat rows). */
+.stagger > * { animation: rise-in 0.5s var(--ease-out-soft) both; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(7) { animation-delay: 360ms; }
+.stagger > *:nth-child(n + 8) { animation-delay: 420ms; }
+
+/* Table rows fade in by index (--i), capped so long tables stay quick. */
+.row-in {
+  animation: rise-in 0.4s var(--ease-out-soft) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 28ms);
+}
+
+/* Progress bars grow from their anchored side. */
+.grow-x { transform-origin: left center; animation: grow-x 0.9s var(--ease-out-soft) both; }
+.grow-x-r { transform-origin: right center; animation: grow-x 0.9s var(--ease-out-soft) both; }
+.gauge-arc { animation: gauge-sweep 1.1s var(--ease-out-soft) both; }
+
+.skeleton-shimmer {
+  background-image: linear-gradient(90deg, transparent 0%, var(--skeleton-shine) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* Cards that respond to the pointer. */
+.lift { transition: transform 0.2s var(--ease-out-soft), box-shadow 0.2s var(--ease-out-soft), border-color 0.2s; }
+.lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+
+/* Theme switch: the new theme is revealed in a circle from the control that was clicked. */
+html.theme-vt::view-transition-old(root),
+html.theme-vt::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.theme-vt::view-transition-old(root) { z-index: 1; }
+html.theme-vt::view-transition-new(root) { z-index: 2; }
+
+/* The OS setting and the in-app "Animations off" preference both stop motion. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }
-
-/* Darker teal keeps small links and labels readable on light surfaces. */
-.text-accent { color: #0f766e; }
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

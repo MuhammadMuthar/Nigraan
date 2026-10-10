@@ -1,5 +1,6 @@
 import { Ban, CircleCheck, Lock, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CountUp } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 import type { Decision } from "@/lib/types";
 
@@ -28,7 +29,7 @@ export function ScoreBar({ score }: { score: number | null }) {
     <div className="flex items-center gap-2" aria-label={`Risk score ${score} of 100`}>
       <span className="tabular w-7 text-right text-sm font-semibold">{score}</span>
       <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
-        <div className={cn("h-full rounded-full", color)} style={{ width: `${Math.max(3, score)}%` }} />
+        <div className={cn("grow-x h-full rounded-full", color)} style={{ width: `${Math.max(3, score)}%` }} />
       </div>
     </div>
   );
@@ -42,11 +43,11 @@ export function ScoreGauge({ score, decision }: { score: number; decision: strin
     <div className="relative h-[74px] w-[120px]">
       <svg viewBox="0 0 120 70" className="h-full w-full" aria-label={`Risk score ${score}`}>
         <path d="M 14 62 A 46 46 0 0 1 106 62" fill="none" stroke="var(--muted)" strokeWidth="10" strokeLinecap="round" />
-        <path d="M 14 62 A 46 46 0 0 1 106 62" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"
-          strokeDasharray={`${(c * score) / 100} ${c}`} />
+        <path d="M 14 62 A 46 46 0 0 1 106 62" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" className="gauge-arc"
+          style={{ strokeDasharray: `${(c * score) / 100} ${c}` }} />
       </svg>
       <div className="absolute inset-x-0 bottom-0 text-center">
-        <div className="tabular text-2xl font-bold leading-none">{score}</div>
+        <div className="tabular text-2xl font-bold leading-none"><CountUp value={score} duration={1100} /></div>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">risk / 100</div>
       </div>
     </div>

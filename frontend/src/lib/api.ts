@@ -33,7 +33,56 @@ export function clearSession() {
   window.localStorage.removeItem(USER_KEY);
 }
 
-async function request<T>(method: string, path: string, body?: unknown, init: RequestInit = {}): Promise<T> {
+// Requests in flight (drives the top progress bar) and a hook for "something changed on the server".
+let inflight = 0;
+let writes = 0;
+const activityListeners = new Set<() => void>();
+const idleWaiters = new Set<() => void>();
+const mutationListeners = new Set<(path: string) => void>();
+// POSTs that compute or authenticate but change no business data.
+const READ_ONLY = ["/auth/login", "/cash/scenarios"];
+
+function setInflight(delta: number) {
+  inflight += delta;
+  activityListeners.forEach((l) => l());
+}
+export function subscribeActivity(cb: () => void) {
+  activityListeners.add(cb);
+  return () => {
+    activityListeners.delete(cb);
+  };
+}
+export const getActivity = () => inflight;
+/** Resolves once no write is in flight (background prefetches wait, e.g. while a demo reset rebuilds the data). */
+export function writesSettled(): Promise<void> {
+  return writes === 0 ? Promise.resolve() : new Promise((resolve) => idleWaiters.add(resolve));
+}
+export const writing = () => writes > 0;
+export function onMutation(cb: (path: string) => void) {
+  mutationListeners.add(cb);
+  return () => {
+    mutationListeners.delete(cb);
+  };
+}
+
+async function request<T>(method: string, path: string, body?: unknown, background = false): Promise<T> {
+  const write = method !== "GET" && !READ_ONLY.some((p) => path.startsWith(p));
+  setInflight(1);
+  if (write) writes++;
+  try {
+    const result = await send<T>(method, path, body, background);
+    if (write) mutationListeners.forEach((l) => l(path));
+    return result;
+  } finally {
+    setInflight(-1);
+    if (write && --writes === 0) {
+      idleWaiters.forEach((w) => w());
+      idleWaiters.clear();
+    }
+  }
+}
+
+async function send<T>(method: string, path: string, body?: unknown, background = false, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string>) };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -49,7 +98,8 @@ async function request<T>(method: string, path: string, body?: unknown, init: Re
   } catch {
     throw new ApiError(0, "network", "Cannot reach the Nigraan API. It may be waking up - retry in a few seconds.");
   }
-  if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/auth/login")) {
+  // a background prefetch never signs the user out; the screen's own request decides
+  if (res.status === 401 && !background && typeof window !== "undefined" && !path.startsWith("/auth/login")) {
     clearSession();
     if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
   }
@@ -62,7 +112,7 @@ async function request<T>(method: string, path: string, body?: unknown, init: Re
 }
 
 export const api = {
-  get: <T,>(p: string) => request<T>("GET", p),
+  get: <T,>(p: string, opts: { background?: boolean } = {}) => request<T>("GET", p, undefined, opts.background),
   post: <T,>(p: string, body?: unknown) => request<T>("POST", p, body ?? {}),
   patch: <T,>(p: string, body?: unknown) => request<T>("PATCH", p, body ?? {}),
   upload: <T,>(p: string, form: FormData) => request<T>("POST", p, form),

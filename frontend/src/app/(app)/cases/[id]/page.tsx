@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Ban, CircleCheck, Copy, FileText, Landmark, Languages, Loader2, Network, ShieldCheck, Sparkles, TriangleAlert, Workflow,
@@ -63,8 +63,8 @@ export default function CasePage() {
 
   return (
     <>
-      <Link href={c.run_id ? "/run" : "/cases"} className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />Back</Link>
-      <Card className="overflow-hidden">
+      <Link href={c.run_id ? "/flagged" : "/cases"} className="group mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />{c.run_id ? "Flagged invoices" : "Cases"}</Link>
+      <Card className="animate-rise-in overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-6 py-3 text-xs">
           <span className="font-semibold uppercase tracking-wider text-muted-foreground">Investigation / Case #{c.id}</span>
           <span className="text-muted-foreground">Synthetic company · evidence-led review</span>
@@ -108,12 +108,12 @@ export default function CasePage() {
         <Card className="mt-5"><CardContent className="pt-5 text-sm text-muted-foreground">This case was found in the internal audit before Nigraan was installed. It is used as a training label; no score was recorded at the time.</CardContent></Card>
       ) : (
         <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_350px]">
-          <div className="grid min-w-0 content-start gap-5">
+          <div className="stagger grid min-w-0 content-start gap-5">
             <Card>
               <CardHeader><CardTitle>Why Nigraan stopped this payment</CardTitle><CardDescription>Plain-English reasons from each engine, strongest evidence first</CardDescription></CardHeader>
               <CardContent className="grid gap-3">
                 {s.reasons.filter((r) => r.engine !== "info").map((r, i) => (
-                  <div key={i} className={cn("flex flex-wrap items-start gap-2 rounded-lg p-3 text-sm leading-relaxed", i === 0 ? "border border-border bg-muted/50 font-medium" : "bg-muted/20")}>
+                  <div key={i} style={{ "--i": i } as React.CSSProperties} className={cn("row-in flex flex-wrap items-start gap-2 rounded-lg p-3 text-sm leading-relaxed", i === 0 ? "border border-border bg-muted/50 font-medium" : "bg-muted/20")}>
                     <Badge variant={r.engine === "rules" ? "blocked" : "accent"} className="mt-0.5 shrink-0">{ENGINE_LABEL[r.engine] ?? r.engine}</Badge>
                     <span>{r.text}</span>
                   </div>
@@ -143,7 +143,6 @@ export default function CasePage() {
                     {ev!.graph.links.length > 0 && <div className="mb-3 rounded-md bg-blocked-soft px-3 py-2 text-sm text-blocked">{ev!.graph.links[0].text} <span className="text-xs">(signal {ev!.graph.signal.toFixed(2)})</span></div>}
                     {c.vendor_info.related_party_note && <div className="mb-3 rounded-md bg-muted px-3 py-2 text-xs">{c.vendor_info.related_party_note}</div>}
                     <GraphView nodes={c.graph.nodes} edges={c.graph.edges} path={(ev!.graph.path ?? []).map((p) => p.id)} />
-                    <div className="mt-2 flex gap-4 text-[11px] text-muted-foreground"><span><span className="mr-1 inline-block size-2 rounded-full bg-accent" />vendor</span><span><span className="mr-1 inline-block size-2 rounded-full bg-blocked" />employee</span><span><span className="mr-1 inline-block size-2 rounded-full bg-zinc-500" />identifier (phone, bank, address)</span></div>
                   </TabsContent>
                   <TabsContent value="invoice"><InvoiceView c={c} /></TabsContent>
                 </Tabs>
@@ -162,7 +161,7 @@ export default function CasePage() {
             </Card>
           </div>
 
-          <div className="grid content-start gap-5">
+          <div className="stagger grid content-start gap-5">
             <SummaryCard caseId={c.id} />
             <Card><CardContent className="pt-5"><AgentTrace steps={s.trace} /></CardContent></Card>
             <Card>
@@ -232,9 +231,9 @@ function BankTimeline({ rows, payDate }: { rows: BankRow[]; payDate: string }) {
   if (!rows.length) return null;
   return (
     <ol className="relative ml-2 border-l border-border">
-      {rows.map((r) => (
-        <li key={r.id} className="mb-4 ml-4">
-          <span className={cn("absolute -left-[6px] mt-1 size-3 rounded-full border-2 border-card", r.current_for_payment ? "bg-blocked" : "bg-zinc-400")} />
+      {rows.map((r, i) => (
+        <li key={r.id} className="row-in relative mb-4 ml-4" style={{ "--i": i } as React.CSSProperties}>
+          <span className={cn("absolute -left-[22px] mt-1 size-3 rounded-full border-2 border-card", r.current_for_payment ? "bg-blocked ring-4 ring-blocked/15" : "bg-zinc-400 dark:bg-zinc-500")} />
           <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
             {r.bank} ••{r.last4}
             {r.current_for_payment && <Badge variant="blocked">this payment</Badge>}
@@ -246,7 +245,7 @@ function BankTimeline({ rows, payDate }: { rows: BankRow[]; payDate: string }) {
           </div>
         </li>
       ))}
-      <li className="ml-4 text-xs text-muted-foreground"><span className="absolute -left-[6px] mt-0.5 size-3 rounded-full border-2 border-card bg-accent" />Payment entered {dateTime(payDate)}</li>
+      <li className="relative ml-4 text-xs text-muted-foreground"><span className="absolute -left-[22px] mt-0.5 size-3 rounded-full border-2 border-card bg-accent" />Payment entered {dateTime(payDate)}</li>
     </ol>
   );
 }
@@ -270,14 +269,8 @@ function InvoiceView({ c }: { c: CaseDetail }) {
 
 function SummaryCard({ caseId }: { caseId: number }) {
   const [lang, setLang] = useState<"en" | "ur">("en");
-  const key = `${caseId}-${lang}`;
-  const [res, setRes] = useState<{ key: string; s: Summary } | null>(null);
-  useEffect(() => {
-    api.get<Summary>(`/cases/${caseId}/summary?lang=${lang}`)
-      .then((s) => setRes({ key: `${caseId}-${lang}`, s }))
-      .catch(() => setRes({ key: `${caseId}-${lang}`, s: { mode: "error", text: null, evidence: null } }));
-  }, [caseId, lang]);
-  const s = res && res.key === key ? res.s : null;
+  const { data, error } = useApi<Summary>(`/cases/${caseId}/summary?lang=${lang}`);
+  const s: Summary | null = data ?? (error ? { mode: "error", text: null, evidence: null } : null);
   const modeLabel: Record<string, string> = { llm: "LLM summary", llm_cached: "LLM summary (cached)", template: "Template (no LLM key)", evidence_only: "Evidence only", error: "Unavailable" };
   return (
     <Card>
@@ -292,7 +285,7 @@ function SummaryCard({ caseId }: { caseId: number }) {
         {!s ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading explanation…</div> : (
           <>
             <Badge variant="outline" className="w-fit">{modeLabel[s.mode] ?? s.mode}</Badge>
-            {s.text ? <p className="whitespace-pre-line text-sm leading-relaxed">{s.text}</p> : s.evidence && (
+            {s.text ? <p key={`text-${lang}`} className="animate-fade-in whitespace-pre-line text-sm leading-relaxed">{s.text}</p> : s.evidence && (
               <ul className="list-disc pl-4 text-sm">{((s.evidence.reasons as string[]) ?? []).map((r, i) => <li key={i}>{r}</li>)}</ul>
             )}
             {s.mode === "error" && <p role="alert" className="text-sm text-muted-foreground">The explanation is unavailable. Use the evidence and verification step to investigate.</p>}

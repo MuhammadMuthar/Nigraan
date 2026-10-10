@@ -10,7 +10,7 @@ export function Tooltip({ content, children, side = "top" }: { content: React.Re
     <T.Root delayDuration={150}>
       <T.Trigger asChild>{children}</T.Trigger>
       <T.Portal>
-        <T.Content side={side} sideOffset={6} className={cn("z-50 max-w-xs rounded-md bg-foreground px-2.5 py-1.5 text-xs text-white shadow-lg")}>
+        <T.Content side={side} sideOffset={6} className={cn("z-50 max-w-xs origin-[var(--radix-tooltip-content-transform-origin)] rounded-md bg-foreground px-2.5 py-1.5 text-xs text-background shadow-lg data-[state=closed]:animate-pop-out data-[state=delayed-open]:animate-pop-in data-[state=instant-open]:animate-pop-in")}>
           {content}
           <T.Arrow className="fill-foreground" />
         </T.Content>
