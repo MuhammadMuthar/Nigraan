@@ -7,6 +7,8 @@ test("mobile navigation preserves accountant permissions and exposes every route
   await page.goto("/login");
   await page.getByRole("button", { name: /Sana Iqbal/ }).click();
   await page.waitForURL("**/run");
+  await expect(page.getByRole("button", { name: "Reset data", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Only the owner can reset data", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Retrain", exact: true })).toBeDisabled();
   const approve = page.getByRole("button", { name: /Approve all green/ });
   if (await approve.count()) await expect(approve).toBeDisabled();

@@ -37,10 +37,10 @@ All numbers below come from `python -m ml.evaluate --months 11-12 --seeds 42,43,
 | Duplicate detector | Logistic regression (sklearn) | Pair features vs earlier invoices of the same or fuzzy-matched vendor (±90 days, ±2%): normalised-number similarity, numeric gap, date gap, amount difference, line-item Jaccard, TF-IDF char n-gram cosine | Exact-match rules miss `INV-0102` vs `INV-102` with a 0.5% amount change, yet fire on legit weekly standing orders |
 | Risk model | XGBoost, SHAP reasons via `pred_contribs` | 27 behaviour features at payment time: amount vs vendor history, unit price vs item and vendor price, bank-change age/source/editor, first payment to an account, vendor age, round amounts, same payee in 48 h, approval-limit gap, entry hour, Sunday/holiday, creator can approve, vague items, days since invoice date | Fraud is a combination of weak signals; thresholds per feature either flood or miss |
 | Anomaly detector | Isolation Forest (contamination 0.03), normalised to 0-1 above the training 90th percentile | Compact imputed feature subset | For patterns not in the labelled history |
-| Relationship graph | NetworkX with time-valid edges | Vendors, employees, users, bank hashes, phones, normalised addresses, CNIC hashes | Finds vendor → phone → employee paths. Disclosed related parties are down-weighted (×0.2) |
+| Relationship graph | Deterministic NetworkX matching with time-valid edges | Vendors, employees, users, bank hashes, phones, normalised addresses, CNIC hashes | Finds vendor → phone → employee paths. Disclosed related parties are down-weighted (×0.2). This engine is not a learned model. |
 | Rules | Deterministic | Exact duplicate (same vendor + normalised number + total), blocked vendor/account → red; split-payment pattern → at least yellow | Certain cases need no model |
 
-**Fusion.** `score = 100 × max(rule_hit, Σ wᵢ·signalᵢ)`.
+**Fusion.** Compute the weighted raw signal `Σ wᵢ·signalᵢ`, rescale it using the tuned yellow/red thresholds, then take `score = max(100 × rule_hit, rescaled_signal)`. The rescaling is piecewise linear; the displayed score is not a fraud probability.
 
 - Tuned weights: risk model 0.5, anomaly 0.1, duplicate 0.5, graph 0.5.
 - Thresholds: t_yellow 0.088 → 40, t_red 0.274 → 75 (piecewise-linear, monotone).
@@ -91,6 +91,21 @@ The Isolation Forest adds false alarms and no recall on these planted types. It 
 
 Every type stays ≥ 70% (all at 100% alert recall).
 
+### Review study: stronger rules and invoice-age sensitivity
+
+[review_eval.json](../models/review_eval.json) adds a reproducible comparison on the same 638 held-out payments (22 planted frauds). Its model version and SHA-256 fingerprints must match the shipped artifacts before the API displays it. `python -m ml.review_evaluate` writes this separate study without replacing production models.
+
+| System | Fraud caught (yellow/red) | Legitimate payments flagged |
+| --- | --- | --- |
+| Shipped firewall | 22/22 (100%) | 22/616 (3.6%) |
+| Simple rules (number repeated or individual amount over limit) | 5/22 (22.7%) | 20/616 (3.2%) |
+| Expert rules | 19/22 (86.4%) | 147/616 (23.9%) |
+| Firewall refit without invoice-age feature | 22/22 (100%) | 25/616 (4.1%) |
+
+Expert rules use explicit review thresholds for recent bank changes, new vendors, night entry, inflated prices and combined payee exposure, plus deterministic policy and relationship checks. They exclude invoice age. These broad checks were not optimized to match the firewall's false-alarm rate; the results do not establish superiority over all possible rules. Live run comparisons describe actual flags and amounts, not accuracy or proven fraud. Graph and split checks are deterministic.
+
+The sensitivity study refits XGBoost and Isolation Forest on the same historical training data without `days_since_invoice_date`; it keeps the shipped duplicate model, graph/policy engines and fusion thresholds, with no retuning. Strong recall in this single synthetic test does not establish real-world generalization. Small planted-fraud counts and synthetic signatures remain important limits.
+
 ## Late-payment model
 
 - **Target**: receivable fully paid after its due date (0 grace days). Unpaid past due at the data end also counts as late. Not-yet-due invoices are excluded as unknown (122 in the test window).
@@ -118,13 +133,24 @@ The deterministic engine (`services/cash/engine.py`) computes `closing = opening
 | Method | Mean absolute error per week | WAPE |
 |---|---|---|
 | Everyone pays on the due date (baseline) | Rs 60.4 lakh | 0.66 |
-| **Due date + customer's median past delay (shipped)** | **Rs 35.4 lakh** | **0.39** |
+| **Due date + customer's median past delay (original next-week assumption policy)** | **Rs 35.4 lakh** | **0.39** |
 
 That is 41% lower weekly error.
 
+**Current conservative collection policy.** A stale receivable beyond both the customer's median and slow-payer delay has no confirmed collection date. It is excluded from base cash and listed as an unconfirmed assumption. An explicit dated What-if scenario may include it without changing the books. Historical phone/payment evidence and account amounts remain facts; a future collection date remains an estimate or assumption.
+
+The original table above reproduces the older next-week assumption policy. [cash_review_metrics.json](../models/cash_review_metrics.json), produced by `python -m ml.cash_review`, compares both policies on the same five rolling origins (3–31 August 2026), four weeks each, synthetic seed 42:
+
+| Current policy method | Mean absolute weekly receipt error | WAPE |
+| --- | --- | --- |
+| Due dates; unconfirmed overdue excluded | Rs 25,93,299.50 | 0.284 |
+| Median delay; unconfirmed overdue excluded | Rs 21,99,658.50 | 0.241 |
+
+The current median-delay policy reduces error by **15.2%** against its matching due-date baseline. This measures four-week receipts only; it does not validate 13-week balances, payment forecasts or reserve outcomes. The additive artifact is checked against the receipt-policy source hash before its results are shown.
+
 ## Document reader
 
-Gemini Flash (JSON schema, temperature 0, 20 s timeout, one retry, cached by file hash) cross-checked by PDF-text/Tesseract + regex and deterministic validators (line sums, 18% tax, NTN format, IBAN mod-97). On the 40 demo-week PDFs, the regex fallback alone extracts **100% of fields** (400/400) and all line items. **Caveat:** that fallback was written for these three invoice layouts, so this proves the pipeline, not accuracy on unseen layouts. Gemini numbers appear in `models/extraction_eval.json` once `GEMINI_API_KEY` is set.
+Gemini Flash (JSON schema, temperature 0, default 8 s timeout per HTTP attempt, one retry, cached by file hash) cross-checked by PDF-text/Tesseract + regex and deterministic validators (line sums, 18% tax, NTN format, IBAN mod-97). Upload extraction runs in a worker thread, so it does not block other API requests. The timeout is not a total extraction deadline: retries and PDF/OCR can take additional time. On the 40 demo-week PDFs, the regex fallback alone extracts **100% of fields** (400/400) and all line items. **Caveat:** that fallback was written for these three invoice layouts, so this proves the pipeline, not accuracy on unseen layouts. No new Gemini measurement is claimed without configured credentials and an actual evaluation.
 
 ## LLM use and guardrails
 

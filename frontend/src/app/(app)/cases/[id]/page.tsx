@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/input";
 import { Empty, Skeleton } from "@/components/ui/misc";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { CaseVerification, type VerificationPlan } from "@/components/app/case-verification";
 
 type InvSummary = { id: number; invoice_no: string; vendor: string; invoice_date: string; received_at: string; total: number; status: string; lines: { description: string; qty: number; unit_price: number }[] };
 type BankRow = { id: number; bank: string; last4: string; valid_from: string; valid_to: string | null; changed_by: string | null; approved_by: string | null; source: string; blocked: boolean; current_for_payment: boolean };
@@ -46,6 +47,8 @@ type CaseDetail = {
   graph: { nodes: { id: string; kind: string; label: string }[]; edges: { source: string; target: string }[] };
   events: { at: string; user: string | null; kind: string; detail: Record<string, unknown> }[];
   verification: string;
+  verification_plan: VerificationPlan;
+  resolution_note?: string | null;
 };
 type Summary = { mode: string; text: string | null; evidence: Record<string, unknown> | null; guardrail?: string };
 
@@ -56,7 +59,7 @@ export default function CasePage() {
   const [resolve, setResolve] = useState<null | "confirmed_fraud" | "false_alarm">(null);
 
   if (loading && !c) return <div className="grid gap-4"><Skeleton className="h-28" /><Skeleton className="h-96" /></div>;
-  if (error || !c) return <Empty icon={<TriangleAlert />} title="Case not found">{error?.message}</Empty>;
+  if (error || !c) return <div role="alert"><Empty icon={<TriangleAlert />} title={error?.status === 404 ? "Case not found" : "Case unavailable"}>{error?.message || "The case could not be loaded."}<div className="mt-3"><Button variant="outline" onClick={reload}>Retry case</Button></div></Empty></div>;
   const s = c.score;
   const canResolve = c.status === "open" && (user?.role === "approver" || user?.role === "owner");
   const ev = s?.evidence;
@@ -122,10 +125,7 @@ export default function CasePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-accent/25">
-              <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="size-4 text-accent" />Suggested verification</CardTitle><CardDescription>Complete this check before recording a case outcome.</CardDescription></CardHeader>
-              <CardContent className="text-sm leading-relaxed">{c.verification}</CardContent>
-            </Card>
+            <CaseVerification plan={c.verification_plan} suggestion={c.verification} finding={c.resolution_note} />
 
             <Card>
               <CardHeader><CardTitle>Evidence</CardTitle><CardDescription>Source records and model signals. Check the invoice, bank timeline and relationship paths.</CardDescription></CardHeader>
@@ -177,7 +177,8 @@ export default function CasePage() {
         </div>
       )}
 
-      <ResolveDialog caseId={c.id} outcome={resolve} onClose={() => setResolve(null)} onDone={() => { setResolve(null); reload(); }} />
+      {!s && <div className="mt-5"><CaseVerification plan={c.verification_plan} suggestion={c.verification} finding={c.resolution_note} /></div>}
+      <ResolveDialog key={c.id} caseId={c.id} plan={c.verification_plan} outcome={resolve} onClose={() => setResolve(null)} onDone={() => { setResolve(null); reload(); }} />
     </>
   );
 }
@@ -298,39 +299,99 @@ function SummaryCard({ caseId }: { caseId: number }) {
   );
 }
 
-function ResolveDialog({ caseId, outcome, onClose, onDone }: { caseId: number; outcome: null | "confirmed_fraud" | "false_alarm"; onClose: () => void; onDone: () => void }) {
+function ResolveDialog({ caseId, plan, outcome, onClose, onDone }: { caseId: number; plan: VerificationPlan; outcome: null | "confirmed_fraud" | "false_alarm"; onClose: () => void; onDone: () => void }) {
   const [note, setNote] = useState("");
+  const [method, setMethod] = useState("");
+  const [reference, setReference] = useState("");
+  const [checks, setChecks] = useState<string[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [block, setBlock] = useState(true);
   const [busy, setBusy] = useState(false);
+  const valid = Boolean(plan?.checklist.length) && plan.checklist.every((item) => checks.includes(item.id)) && Boolean(method) && note.trim().length >= 10 && reference.trim().length >= 10;
+  function close() {
+    if (busy) return;
+    setNote("");
+    setMethod("");
+    setReference("");
+    setChecks([]);
+    setSubmitError(null);
+    setBlock(true);
+    onClose();
+  }
   async function submit() {
+    if (!valid || busy) return;
+    setSubmitError(null);
     setBusy(true);
     try {
-      await api.post(`/cases/${caseId}/resolve`, { outcome, note, block_vendor: outcome === "confirmed_fraud" && block });
-      toast.success(outcome === "confirmed_fraud" ? "Confirmed as fraud. The payment is rejected and the outcome is saved as a training label." : "Marked as a false alarm. The line now needs a second approver; the label feeds the next retrain.");
+      await api.post(`/cases/${caseId}/resolve`, {
+        outcome, note: note.trim(), block_vendor: outcome === "confirmed_fraud" && block,
+        verification: { result: outcome === "false_alarm" ? "verified_legitimate" : "confirmed_issue", method, checks, reference: reference.trim() },
+      });
+      toast.success(outcome === "confirmed_fraud" ? "Payment rejected. Verification and case outcome are recorded." : "False alarm recorded. Any recovered live payment requires a different approver.");
+      setNote("");
+      setMethod("");
+      setReference("");
+      setChecks([]);
       onDone();
     } catch (e) {
-      toast.error((e as Error).message);
+      setSubmitError((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
   return (
-    <Dialog open={!!outcome} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+    <Dialog open={!!outcome} onOpenChange={(o) => !o && close()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogTitle>{outcome === "confirmed_fraud" ? "Confirm fraud" : "Mark as false alarm"}</DialogTitle>
         <DialogDescription>
           {outcome === "confirmed_fraud" ? "The payment will be rejected. The model's score stays on record." : "The red verdict stays on record; an override sends the line to a second approver."}
         </DialogDescription>
-        <Textarea aria-label="Verification note" className="mt-4" placeholder="What did you verify? (required for the audit trail)" value={note} onChange={(e) => setNote(e.target.value)} />
+        <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="mt-4 grid gap-4">
+          <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+            <span className="text-xs font-medium text-muted-foreground">Recorded verification result</span>
+            <p className="mt-1 font-semibold">{outcome === "false_alarm" ? "Legitimate payment verified" : "Issue confirmed"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Record checks you actually completed. Model scores and the AI explanation do not replace verification.</p>
+          </div>
+          <fieldset className="grid gap-2">
+            <legend className="mb-2 text-sm font-semibold">Required verification checks</legend>
+            {plan?.checklist.map((item) => (
+              <label key={item.id} className="flex items-start gap-2 rounded-md border border-border p-2.5 text-sm">
+                <input type="checkbox" className="mt-1 size-4 shrink-0 accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" checked={checks.includes(item.id)} onChange={(e) => setChecks(e.target.checked ? [...checks, item.id] : checks.filter((id) => id !== item.id))} />
+                <span>{item.label}</span>
+              </label>
+            ))}
+            {!plan?.checklist.length && <p role="alert" className="text-sm text-blocked">Verification requirements are unavailable. Reload the case before recording an outcome.</p>}
+          </fieldset>
+          <div className="grid gap-1.5">
+            <label className="text-sm font-medium" htmlFor="verification-method">Verification method</label>
+            <select id="verification-method" value={method} onChange={(e) => setMethod(e.target.value)} required className="h-10 rounded-md border border-border bg-card px-3 text-sm font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <option value="">Choose the method used</option>
+              <option value="registered_phone" disabled={!plan?.registered_phone}>Callback to current registered phone</option>
+              <option value="documents">Supporting documents</option>
+              <option value="in_person">In-person verification</option>
+              <option value="requester_review">Internal records review</option>
+            </select>
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-sm font-medium" htmlFor="verification-reference">Evidence reference</label>
+            <Textarea id="verification-reference" required minLength={10} value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Contact and time, document ID, or purchase-order reference" className="min-h-16 font-normal" />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-sm font-medium" htmlFor="verification-note">Verification note</label>
+            <Textarea id="verification-note" required minLength={10} placeholder="What did you verify? Record the finding and why it supports this outcome." value={note} onChange={(e) => setNote(e.target.value)} className="font-normal" />
+          </div>
+          <p className="text-xs text-muted-foreground">Complete every check and give an evidence reference and finding of at least 10 characters each.</p>
         {outcome === "confirmed_fraud" && (
           <label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={block} onChange={(e) => setBlock(e.target.checked)} />Block this vendor</label>
         )}
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button variant={outcome === "confirmed_fraud" ? "danger" : "default"} disabled={busy || note.trim().length < 3} onClick={submit}>
+        {submitError && <p role="alert" className="rounded-md bg-blocked-soft p-3 text-sm text-blocked">{submitError}</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" disabled={busy} onClick={close}>Cancel</Button>
+          <Button type="submit" variant={outcome === "confirmed_fraud" ? "danger" : "default"} disabled={busy || !valid}>
             {busy && <Loader2 className="animate-spin" />}{outcome === "confirmed_fraud" ? <Ban /> : <Workflow />}Save outcome
           </Button>
         </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

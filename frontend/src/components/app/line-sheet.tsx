@@ -10,13 +10,15 @@ import { Button } from "@/components/ui/button";
 import { DecisionBadge, ENGINE_LABEL, FRAUD_NAMES, ScoreGauge } from "@/components/app/decision";
 import { AgentTrace } from "@/components/app/trace";
 import { EngineBars } from "@/components/app/engine-bars";
-import type { Reason, TraceStep } from "@/lib/types";
+import { LineRuleChecks } from "@/components/app/rules-comparison";
+import type { Reason, RulesComparison, TraceStep } from "@/lib/types";
 
 export type ScoreDetail = {
   payment_id: number; vendor: string; invoice_no: string; amount: number; score: number; decision: string; reasons: Reason[];
   engines: { signals: Record<string, number>; contributions: Record<string, number>; fraud_type: string | null };
   evidence: Record<string, unknown>; trace: TraceStep[]; model_version: string; scored_at: string; case_id: number | null;
   invoice_source: string; extraction: { engine?: string } | null;
+  rules_comparison?: RulesComparison;
 };
 
 export function LineSheet({ paymentId, onClose }: { paymentId: number | null; onClose: () => void }) {
@@ -66,7 +68,9 @@ export function LineSheet({ paymentId, onClose }: { paymentId: number | null; on
                 {d.reasons.length === 0 && <li className="text-sm text-muted-foreground">No risk signals.</li>}
               </ul>
             </div>
+            <LineRuleChecks comparison={d.rules_comparison} detailed />
             <EngineBars contributions={d.engines.contributions} signals={d.engines.signals} />
+            <p className="text-xs leading-relaxed text-muted-foreground">XGBoost and the anomaly detector learn from payment history; near-duplicate matching also uses a learned model. Exact-duplicate policy rules and relationship checks are deterministic. The combined score is a risk ranking, not a probability of fraud.</p>
             <AgentTrace steps={d.trace} />
           </div>
         )}

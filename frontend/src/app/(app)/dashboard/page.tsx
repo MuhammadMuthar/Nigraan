@@ -7,10 +7,13 @@ import { day, pct, rs, rsShort } from "@/lib/format";
 import { PageTitle } from "@/components/app/shell";
 import { FRAUD_NAMES } from "@/components/app/decision";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CountUp, Empty, Skeleton, Stat } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 import { BAR_CURSOR, TOOLTIP } from "@/components/app/chart-style";
+import type { CashValidation, CollectionPolicy } from "@/lib/types";
+import { ReviewEvaluationCards, type ReviewEvaluation } from "@/components/app/review-evaluation";
 
 type M = { recall: number; precision_red: number; false_alarm_rate: number; pr_auc: number; rupees_protected_red?: number; rupees_fraud?: number };
 type Summary = {
@@ -18,23 +21,24 @@ type Summary = {
   rupees_protected_this_month: number; open_cases: { count: number; amount: number };
   alerts_by_type: { type: string; name: string; count: number; amount: number; red: number }[];
   historical_confirmed: { type: string; name: string; count: number; amount: number }[];
-  cash: { low_point: number; low_point_day: string; first_breach: string | null; reserve: number; stays_above_reserve: boolean; release_everything?: { first_breach: string | null; low_point: number } } | null;
+  cash: { low_point: number; low_point_day: string; first_breach: string | null; reserve: number; stays_above_reserve: boolean; release_everything?: { first_breach: string | null; low_point: number }; collection_policy?: CollectionPolicy; validation?: CashValidation } | null;
   run: { total: number; by_decision: Record<string, number>; pending: number } | null;
   model_version: string;
   metrics: null | {
-    test_period: string; generated_at: string;
+    test_period: string; generated_at: string; model_version: string | null;
     fraud: { n_payments: number; n_fraud: number; nigraan: M; baseline: M; per_type: Record<string, { name: string; n: number; caught: number; recall: number }> };
     late: { shipped: string; pr_auc: number; baseline_pr_auc: number; lr_pr_auc: number; xgb_pr_auc: number; precision_top20: number; brier: number; baseline_brier: number };
     cash: { mae: number; baseline_mae: number; improvement: number };
     robustness?: Record<string, { mean: number; min: number; max: number }>;
     extraction?: { field_accuracy: number; engine: string; files: number } | null;
+    review?: ReviewEvaluation;
   };
 };
 
 export default function Dashboard() {
-  const { data, loading, error } = useApi<Summary>("/dashboard/summary");
+  const { data, loading, error, reload } = useApi<Summary>("/dashboard/summary");
   if (loading && !data) return <div className="grid gap-4"><Skeleton className="h-28" /><Skeleton className="h-80" /></div>;
-  if (error || !data) return <Empty icon={<LayoutDashboard />} title="Dashboard unavailable">{error?.message}</Empty>;
+  if (error || !data) return <Empty icon={<LayoutDashboard />} title="Dashboard unavailable"><p role="alert">{error?.message ?? "No dashboard response received."}</p><Button variant="outline" className="mt-4" onClick={reload}>Retry dashboard</Button></Empty>;
   const m = data.metrics;
   const alerts = data.alerts_by_type.map((a) => ({ ...a, label: FRAUD_NAMES[a.type] ?? a.name, amountR: a.amount / 100 }));
   return (
@@ -50,13 +54,14 @@ export default function Dashboard() {
           <Link href="/cases" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Review cases<ArrowRight className="size-3" /></Link></CardContent></Card>
         <Card><CardContent className="pt-5"><Wallet aria-hidden className="mb-4 size-5 text-muted-foreground" />{data.cash ? <Stat label="Cash low point (13 weeks)" value={rs(data.cash.low_point)} sub={data.cash.first_breach ? `breaches reserve ${day(data.cash.first_breach)}` : `${day(data.cash.low_point_day)} · above the ${rs(data.cash.reserve)} reserve`} tone={data.cash.first_breach ? "blocked" : "allow"} /> : <Stat label="Cash low point (13 weeks)" value="—" sub="Cash projection unavailable" />}
           <Link href="/cash" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Explore cash outlook<ArrowRight className="size-3" /></Link>
+          {data.cash?.collection_policy && <div className="mt-2 text-xs text-muted-foreground">{rs(data.cash.collection_policy.unconfirmed_amount)} in {data.cash.collection_policy.unconfirmed_count} unconfirmed overdue collections excluded. Receipts evaluated over 4 weeks.</div>}
           {data.cash?.release_everything?.first_breach && <div className="mt-1 text-[11px] text-blocked">Without the firewall: breach on {day(data.cash.release_everything.first_breach, { weekday: "short" })}</div>}</CardContent></Card>
         <Card><CardContent className="pt-5"><LayoutDashboard aria-hidden className="mb-4 size-5 text-muted-foreground" />{data.run ? <Stat label="This week's run" value={`${data.run.total} lines`} sub={<span><span className="text-allow">{data.run.by_decision.allow} allow</span> · <span className="text-review">{data.run.by_decision.review} review</span> · <span className="text-blocked">{data.run.by_decision.blocked} blocked</span> · {data.run.pending} awaiting</span>} /> : <Stat label="This week's run" value="—" sub="load the demo week" />}<Link href="/run" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Open payment run<ArrowRight className="size-3" /></Link></CardContent></Card>
       </div>
 
       <div className="stagger mt-5 grid gap-5 xl:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Alerts this month by fraud pattern</CardTitle><CardDescription>Review and blocked lines in this demo’s payment runs, by the engine&apos;s suspected pattern</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Alerts this month by fraud pattern</CardTitle><CardDescription>Model review/block verdicts in this demo’s payment runs. Blocked counts show lines still locked; resolved alerts remain in the comparison.</CardDescription></CardHeader>
           <CardContent>
             {alerts.length === 0 ? <div className="py-10 text-center text-sm text-muted-foreground">No alerts in the current demo yet. Load the demo week to see risk patterns.</div> : (
               <ResponsiveContainer width="100%" height={230}>
@@ -81,11 +86,12 @@ export default function Dashboard() {
             <CardHeader>
               <Badge variant="outline" className="mb-2 w-fit">Offline ML evaluation · synthetic hold-out</Badge>
               <CardTitle className="flex items-center gap-1.5"><BadgeCheck className="size-4 text-accent" />Fraud firewall vs rules-only baseline</CardTitle>
-              <CardDescription>Held-out test: {m.test_period}. {m.fraud.n_payments} payments, {m.fraud.n_fraud} planted frauds the models never saw.</CardDescription>
+              <CardDescription>Saved evaluation of model {m.model_version ?? "version unavailable"}: {m.test_period}. {m.fraud.n_payments} payments, {m.fraud.n_fraud} planted frauds. Basic baseline: exact invoice number or amount above the approval limit.</CardDescription>
             </CardHeader>
             <CardContent>
+              {m.model_version !== data.model_version && <p className="mb-4 rounded-lg border border-border bg-muted p-3 text-xs">These saved results describe model {m.model_version ?? "version unavailable"}. The current model is {data.model_version}; its performance is not measured by this table.</p>}
               <div className="grid grid-cols-[1fr_90px_90px] gap-y-2 text-sm">
-                <div className="text-xs text-muted-foreground" /><div className="text-right text-xs font-semibold text-accent">Nigraan</div><div className="text-right text-xs font-semibold text-muted-foreground">Rules only</div>
+                <div className="text-xs text-muted-foreground" /><div className="text-right text-xs font-semibold text-accent">Nigraan</div><div className="text-right text-xs font-semibold text-muted-foreground">Basic rules</div>
                 {([["Fraud caught (recall)", "recall", true], ["Precision at red", "precision_red", true], ["False-alarm rate", "false_alarm_rate", false], ["PR-AUC", "pr_auc", true]] as const).map(([label, key, higher]) => (
                   <Row key={key} label={label} a={m.fraud.nigraan[key]} b={m.fraud.baseline[key]} higher={higher} fmt={key === "pr_auc" ? (x) => x.toFixed(2) : (x) => pct(x, 1)} />
                 ))}
@@ -106,6 +112,7 @@ export default function Dashboard() {
         ) : <Card><CardContent className="pt-5 text-sm text-muted-foreground">No evaluation results yet.</CardContent></Card>}
       </div>
 
+      {m?.review && <ReviewEvaluationCards evaluation={m.review} />}
       {m && (
         <div className="stagger mt-5 grid gap-5 lg:grid-cols-3">
           <Card>
@@ -122,18 +129,21 @@ export default function Dashboard() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-accent" />Cash forecast accuracy</CardTitle><CardDescription>Weekly receipts, rolling backtest over the test months</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-accent" />Cash forecast accuracy</CardTitle><CardDescription>Weekly receipts, rolling 4-week backtest over the test months. The 13-week display extends beyond the evaluated horizon.</CardDescription></CardHeader>
             <CardContent>
-              <div className="tabular text-3xl font-semibold text-accent">{pct(m.cash.improvement)}</div>
-              <div className="text-sm">lower weekly error than assuming everyone pays on the due date</div>
-              <div className="mt-2 text-xs text-muted-foreground">Mean absolute error {rs(Math.round(m.cash.mae) * 100)}/week vs {rs(Math.round(m.cash.baseline_mae) * 100)}/week</div>
+              {data.cash?.validation?.current_policy_backtested ? <>
+                <div className="tabular text-3xl font-semibold">{rs(Math.round(data.cash.validation.mae_rupees_per_week ?? 0) * 100)}</div>
+                <div className="text-sm">weekly receipt error for the current conservative policy</div>
+                <div className="mt-2 text-xs text-muted-foreground">{data.cash.validation.origins.length} rolling origins · synthetic seed {data.cash.validation.seed} · WAPE {pct(data.cash.validation.wape, 1)}. {pct(data.cash.validation.improvement_vs_due_date, 1)} below the matching due-date baseline.</div>
+              </> : <div className="text-sm text-muted-foreground">The current conservative collection policy has no saved backtest available.</div>}
+              <div className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">Original next-week assumption policy: {pct(m.cash.improvement)} lower weekly error than due dates, {rs(Math.round(m.cash.mae) * 100)}/week vs {rs(Math.round(m.cash.baseline_mae) * 100)}/week. This older result does not measure the current overdue-collection policy.</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-1.5"><Brain className="size-4 text-accent" />Document reader</CardTitle><CardDescription>Field accuracy on the evaluated demo-week PDFs</CardDescription></CardHeader>
             <CardContent>
               {m.extraction ? (<><div className="tabular text-3xl font-semibold text-accent">{pct(m.extraction.field_accuracy, 1)}</div><div className="text-sm">of fields extracted exactly ({m.extraction.engine}, {m.extraction.files} files)</div></>) : <div className="text-sm text-muted-foreground">Run <span className="font-mono">python -m ml.eval_extraction</span></div>}
-              <div className="mt-2 text-xs text-muted-foreground">The regex fallback was written for these three invoice layouts, so this proves the pipeline, not accuracy on unseen layouts (that is Gemini&apos;s job). Low-confidence fields are highlighted; the LLM never sets a score or a cash number.</div>
+              <div className="mt-2 text-xs text-muted-foreground">The regex fallback was written for these three invoice layouts. Unseen-layout Gemini accuracy has not been measured here. Low-confidence fields are highlighted; the LLM never sets a score or a cash number.</div>
             </CardContent>
           </Card>
         </div>

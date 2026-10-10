@@ -56,10 +56,10 @@ export function ScoreGauge({ score, decision }: { score: number; decision: strin
 
 export const FRAUD_NAMES: Record<string, string> = {
   F1: "Duplicate invoice", F2: "Bank-detail change", F3: "Shell vendor", F4: "Inflated price",
-  F5: "Split payment", F7: "Out-of-hours self-approval", ANOMALY: "Unusual payment",
+  F5: "Split payment", F7: "Out-of-hours payment", ANOMALY: "Unusual payment",
 };
 
 export const ENGINE_LABEL: Record<string, string> = {
-  rules: "Rules", duplicate: "Duplicate detector", graph: "Relationship graph", risk_model: "Risk model (XGBoost)",
-  anomaly: "Anomaly detector", info: "Note",
+  rules: "Policy rules", duplicate: "Duplicate detector (ML)", graph: "Relationship graph (rules)", risk_model: "Risk model (XGBoost)",
+  anomaly: "Anomaly detector (ML)", info: "Note",
 };

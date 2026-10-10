@@ -1,0 +1,40 @@
+import { expect, test } from "@playwright/test";
+
+test("cash excludes unconfirmed overdue receipts and dates them only in an explicit scenario", async ({ page, request }) => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: /Haji Abdul Rashid/ }).click();
+  await page.waitForURL("**/run");
+  await page.getByRole("button", { name: "Reset data", exact: true }).click();
+  await expect(page.getByText("No payment run this week yet")).toBeVisible();
+  await page.getByRole("button", { name: "Load demo week", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Payment run summary" })).toBeVisible();
+  const token = await page.evaluate(() => localStorage.getItem("nigraan.token"));
+  const headers = { Authorization: `Bearer ${token}` };
+  const before = await request.get("http://localhost:8000/api/v1/cash/projection", { headers });
+  expect(before.ok()).toBeTruthy();
+  const outlook = await before.json();
+  const excluded = outlook.receivables.find((r: { included_in_base: boolean; amount: number }) => !r.included_in_base && r.amount > 0);
+  expect(excluded).toBeTruthy();
+  expect(excluded.expected_date).toBeNull();
+
+  await page.goto("/cash");
+  await expect(page.getByText(/4-week receipt backtest on synthetic history/)).toBeVisible();
+  await expect(page.getByText(/Later weeks and full reserve outcomes are unvalidated/)).toBeVisible();
+  await page.getByRole("checkbox", { name: /^Unconfirmed only/ }).check();
+  const row = page.locator("tbody tr", { has: page.getByText(excluded.invoice_no, { exact: true }) });
+  await expect(row.getByText("Unconfirmed", { exact: true })).toBeVisible();
+  await expect(row.getByText("Excluded from base", { exact: true })).toBeVisible();
+  await row.getByRole("button", { name: "Assume date", exact: true }).click();
+  await page.getByRole("textbox", { name: `New collection date for ${excluded.customer}` }).fill(outlook.projection.as_of);
+  const response = page.waitForResponse((r) => r.url().endsWith("/cash/scenarios") && r.request().method() === "POST");
+  await page.getByRole("button", { name: "Run scenario", exact: true }).click();
+  const result = await response;
+  expect(result.ok()).toBeTruthy();
+  const scenario = await result.json();
+  expect(scenario.delta.unconfirmed_receipts_assumed_count).toBe(1);
+  expect(scenario.delta.unconfirmed_receipts_assumed_amount).toBe(excluded.amount);
+  expect(scenario.delta.total_in_change).toBe(excluded.amount);
+  await expect(page.getByText(/previously excluded receipt\(s\), at the selected dates/)).toBeVisible();
+  const after = await request.get("http://localhost:8000/api/v1/cash/projection", { headers });
+  expect((await after.json()).projection).toEqual(outlook.projection);
+});

@@ -88,6 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   async function run(kind: "reset" | "week" | "retrain") {
+    if (kind === "reset" && user?.role !== "owner") return;
     setBusy(kind);
     try {
       if (kind === "reset") {
@@ -220,9 +221,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {demo?.demo_mode && (
             <div className="flex flex-wrap items-center gap-1 border-t border-border bg-muted/35 px-4 py-2 md:px-8">
               <span className="mr-2 rounded border border-border bg-card px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Demo controls</span>
-              <Tooltip content="Restore the seeded company (history only, no open run)"><Button size="sm" variant="ghost" disabled={!!busy} onClick={() => run("reset")}>
+              {user.role === "owner" ? <Tooltip content="Owner only: restore the seeded company (history only, no open run)"><Button size="sm" variant="ghost" disabled={!!busy} onClick={() => run("reset")}>
                 {busy === "reset" ? <Loader2 className="animate-spin" /> : <RotateCcw />}Reset data
-              </Button></Tooltip>
+              </Button></Tooltip> : <span className="mr-2 text-[11px] text-muted-foreground">Only the owner can reset data</span>}
               <Tooltip content="Import this week's 40 invoices and score the payment run"><Button size="sm" variant="outline" disabled={!!busy || !!demo.open_run_id} onClick={() => run("week")}>
                 {busy === "week" ? <Loader2 className="animate-spin" /> : <CalendarPlus />}Load demo week
               </Button></Tooltip>
