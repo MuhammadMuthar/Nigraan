@@ -300,3 +300,6 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
+
+/* Sidebar width closes towards the left; motion settings above apply here too. */
+.sidebar-panel { transition: width 220ms ease, padding 220ms ease; }

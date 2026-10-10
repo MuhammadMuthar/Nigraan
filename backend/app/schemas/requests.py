@@ -2,8 +2,35 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+
+def exact_money(value: Decimal) -> Decimal:
+    """Do not silently round a request or overflow an integer-paisa ledger column."""
+    if not value.is_finite() or value < 0:
+        raise ValueError("Money must be finite, nonnegative and have at most two decimal places")
+    if not value:
+        return Decimal(0)  # discard huge exponents on zero before formatting/conversion
+    if value > Decimal("92233720368547758.07"):
+        raise ValueError("Money exceeds the supported ledger amount")
+    # Inspect the exact representation instead of multiplying first: extreme exponents
+    # could overflow or underflow the decimal context before validation runs.
+    _, digits, exponent = value.as_tuple()
+    # Only insignificant trailing zeroes may extend beyond the two paisa digits.
+    trailing_zeroes = 0
+    for digit in reversed(digits):
+        if digit:
+            break
+        trailing_zeroes += 1
+    if exponent + trailing_zeroes < -2:
+        raise ValueError("Money must have at most two decimal places")
+    return value
+
+
+Money = Annotated[Decimal, AfterValidator(exact_money)]
 
 
 class LoginIn(BaseModel):
@@ -34,9 +61,9 @@ class VendorPatch(BaseModel):
 
 class LineIn(BaseModel):
     description: str
-    qty: float
-    unit_price: float = Field(description="rupees")
-    amount: float = Field(description="rupees")
+    qty: float = Field(gt=0, allow_inf_nan=False)
+    unit_price: Money = Field(description="rupees")
+    amount: Money = Field(description="rupees")
 
 
 class InvoicePatch(BaseModel):
@@ -44,9 +71,9 @@ class InvoicePatch(BaseModel):
     invoice_no: str | None = None
     invoice_date: date | None = None
     due_date: date | None = None
-    subtotal: float | None = None
-    tax: float | None = None
-    total: float | None = None
+    subtotal: Money | None = None
+    tax: Money | None = None
+    total: Money | None = None
     lines: list[LineIn] | None = None
     confirm: bool = Field(default=False, description="Accountant confirms the extracted fields")
 

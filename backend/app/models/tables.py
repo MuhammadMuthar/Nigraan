@@ -185,7 +185,7 @@ class Payment(Base):
     approved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     pay_date: Mapped[date] = mapped_column(Date, index=True)  # value date at the bank
-    # pending | approved | held | blocked | released | rejected
+    # pending | approved | held | blocked | exported (unsettled) | released (settled) | rejected
     status: Mapped[str] = mapped_column(String(20), default="pending")
     # Set when a red line's case is closed as a false alarm: the line then needs a second approver.
     override_decision: Mapped[str | None] = mapped_column(String(10), nullable=True)

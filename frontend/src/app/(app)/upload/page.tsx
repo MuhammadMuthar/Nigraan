@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, CircleAlert, CircleCheck, FileText, FileUp, Loader2, ScanText, TriangleAlert } from "lucide-react";
+import { ArrowRight, CircleAlert, CircleCheck, FileText, FileUp, Loader2, Plus, ScanText, TriangleAlert } from "lucide-react";
 import { api, API_URL, getToken } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { useApi } from "@/lib/hooks";
 import type { Reason, TraceStep } from "@/lib/types";
 import { PageTitle } from "@/components/app/shell";
 import { DecisionBadge } from "@/components/app/decision";
 import { AgentTrace } from "@/components/app/trace";
+import { VendorCreateDialog } from "@/components/app/vendor-create-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +26,7 @@ type Extracted = {
 type Scored = { payment_id: number; score: number; decision: string; reasons: Reason[]; trace: TraceStep[]; case_id: number | null };
 type Item = { key: string; name: string; state: "uploading" | "extracted" | "scoring" | "scored" | "error"; ext?: Extracted; score?: Scored; error?: string };
 type Sample = { name: string; group: string; hint: string };
+type VendorOption = { id: number; name: string; status: string };
 
 const FIELD_LABEL: Record<string, string> = {
   vendor_name: "Vendor", ntn: "NTN", strn: "STRN", invoice_no: "Invoice no.", invoice_date: "Invoice date", due_date: "Due date",
@@ -37,7 +40,8 @@ export default function UploadPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [drag, setDrag] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const { data: samples } = useApi<Sample[]>("/demo/samples");
+  const { data: samples, error: sampleError, reload: reloadSamples } = useApi<Sample[]>("/demo/samples");
+  const { data: vendors, error: vendorError, reload: reloadVendors } = useApi<VendorOption[]>("/vendors");
 
   const update = (key: string, patch: Partial<Item>) => setItems((xs) => xs.map((x) => (x.key === key ? { ...x, ...patch } : x)));
 
@@ -68,6 +72,7 @@ export default function UploadPage() {
   async function loadSample(s: Sample) {
     try {
       const res = await fetch(`${API_URL}/api/v1/demo/samples/${s.group}/${encodeURIComponent(s.name)}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      if (!res.ok) throw new Error("Could not download this demo sample. Please retry.");
       const blob = await res.blob();
       await handle(new File([blob], s.name, { type: "application/pdf" }));
     } catch (e) {
@@ -104,31 +109,51 @@ export default function UploadPage() {
           ))}
         </div>
       )}
+      {sampleError && <div role="alert" className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm"><CircleAlert className="size-4 text-blocked" /><span className="min-w-0 flex-1">Demo samples unavailable: {sampleError.message}</span><Button size="sm" variant="outline" onClick={() => void reloadSamples()}>Retry samples</Button></div>}
       <div className="mt-6 grid gap-4">
-        {items.map((it) => <UploadCard key={it.key} it={it} onRescore={score} onUpdate={(p) => update(it.key, p)} />)}
+        {items.map((it) => <UploadCard key={it.key} it={it} vendors={vendors} vendorError={vendorError?.message} onReloadVendors={reloadVendors} onRescore={score} onUpdate={(p) => update(it.key, p)} />)}
       </div>
     </>
   );
 }
 
-function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: string, id: number) => void; onUpdate: (p: Partial<Item>) => void }) {
+function UploadCard({ it, vendors, vendorError, onReloadVendors, onRescore, onUpdate }: { it: Item; vendors: VendorOption[] | null; vendorError?: string; onReloadVendors: () => Promise<void>; onRescore: (key: string, id: number) => void; onUpdate: (p: Partial<Item>) => void }) {
   const ext = it.ext;
+  const { user } = useAuth();
+  const prefix = useId();
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [vendorChoice, setVendorChoice] = useState<string | null>(null);
+  const [createdVendor, setCreatedVendor] = useState<VendorOption | null>(null);
+  const [creatingVendor, setCreatingVendor] = useState(false);
+  const selectedVendorId = vendorChoice ?? (ext?.vendor ? String(ext.vendor.id) : "");
+  const canCreateVendor = user?.role === "owner" || user?.role === "accountant";
+  const vendorOptions = [...(vendors ?? [])];
+  if (createdVendor && !vendorOptions.some((vendor) => vendor.id === createdVendor.id)) vendorOptions.push(createdVendor);
+  if (ext?.vendor && !vendorOptions.some((vendor) => vendor.id === ext.vendor?.id)) vendorOptions.push({ ...ext.vendor, status: "unknown" });
   async function confirm() {
-    if (!ext) return;
+    if (!ext || !selectedVendorId) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      const body: Record<string, unknown> = { confirm: true };
+      const body: Record<string, unknown> = { confirm: true, vendor_id: Number(selectedVendorId) };
+      const correctedFields: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(edits)) {
-        if (["subtotal", "tax", "total"].includes(k)) body[k] = Number(v.replace(/,/g, ""));
+        if (["subtotal", "tax", "total"].includes(k)) {
+          const amount = Number(v.replace(/,/g, ""));
+          if (!v.trim() || !Number.isFinite(amount) || amount < 0) throw new Error(`${FIELD_LABEL[k]} must be a non-negative amount.`);
+          body[k] = amount;
+        }
         else if (["invoice_no", "invoice_date", "due_date"].includes(k)) body[k] = v;
+        if (body[k] !== undefined) correctedFields[k] = body[k];
       }
-      await api.patch(`/invoices/${ext.invoice_id}`, body);
-      onUpdate({ ext: { ...ext, status: "received" } });
+      const saved = await api.patch<{ status: string; vendor_id: number; vendor: string }>(`/invoices/${ext.invoice_id}`, body);
+      const manualMatch = String(ext.vendor?.id) !== selectedVendorId;
+      onUpdate({ error: undefined, ext: { ...ext, fields: { ...ext.fields, ...correctedFields }, status: saved.status, ready_to_score: true, vendor: manualMatch ? { id: saved.vendor_id, name: saved.vendor, method: "manual", confidence: 0 } : ext.vendor } });
       onRescore(it.key, ext.invoice_id);
     } catch (e) {
-      toast.error((e as Error).message);
+      setSaveError((e as Error).message);
     } finally {
       setSaving(false);
     }
@@ -144,7 +169,7 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
         {it.score && <DecisionBadge decision={it.score.decision} large />}
         {it.score && <span className="tabular text-sm font-semibold">{it.score.score}/100</span>}
       </div>
-      {it.state === "error" && <div role="alert" className="flex items-center gap-2 px-4 py-3 text-sm text-blocked"><CircleAlert className="size-4" />{it.error}</div>}
+      {it.state === "error" && <div role="alert" className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-blocked"><CircleAlert className="size-4" /><span className="min-w-0 flex-1">{it.error}</span>{ext && ext.status !== "draft" && <Button size="sm" variant="outline" onClick={() => onRescore(it.key, ext.invoice_id)}>Retry scoring</Button>}</div>}
       {ext && (
         <div className="grid gap-5 p-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="min-w-0">
@@ -154,12 +179,12 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
                 const v = ext.fields[f];
                 const c = ext.confidence[f] ?? 0;
                 const low = c < 0.8;
-                const editable = low && ext.status === "draft" && ["invoice_no", "invoice_date", "due_date", "subtotal", "tax", "total"].includes(f);
+                const editable = ext.status === "draft" && ["invoice_no", "invoice_date", "due_date", "subtotal", "tax", "total"].includes(f);
                 return (
                   <div key={f} className={cn("fill-in grid grid-cols-[90px_minmax(0,1fr)_65px] sm:grid-cols-[110px_minmax(0,1fr)_70px] items-center gap-2 rounded-lg px-2 py-2 text-sm", low && "bg-review-soft")} style={{ animationDelay: `${i * 60}ms` }}>
                     <div className="text-xs text-muted-foreground">{FIELD_LABEL[f]}</div>
                     {editable ? (
-                      <Input aria-label={`Correct ${FIELD_LABEL[f]}`} className="h-8 text-sm" defaultValue={v == null ? "" : String(v)} onChange={(e) => setEdits((x) => ({ ...x, [f]: e.target.value }))} />
+                      <Input aria-label={`Correct ${FIELD_LABEL[f]}`} className="h-8 text-sm" defaultValue={v == null ? "" : String(v)} disabled={saving} onChange={(e) => setEdits((x) => ({ ...x, [f]: e.target.value }))} />
                     ) : (
                       <div className={cn("truncate font-mono text-[13px]", v == null && "text-muted-foreground")}>{v == null ? "not found" : typeof v === "number" ? v.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : String(v)}</div>
                     )}
@@ -181,8 +206,15 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
           <div className="grid content-start gap-4">
             <div>
               <div className="mb-1.5 text-xs font-semibold">Vendor match</div>
-              {ext.vendor ? <div className="text-sm"><CircleCheck className="mr-1 inline size-4 text-allow" />{ext.vendor.name} <span className="text-xs text-muted-foreground">via {ext.vendor.method === "ntn" ? "NTN" : "fuzzy name"} ({Math.round(ext.vendor.confidence * 100)}%)</span></div>
-                : <div className="text-sm text-review"><TriangleAlert className="mr-1 inline size-4" />No vendor matched: add the vendor first</div>}
+              {ext.vendor ? <div className="text-sm"><CircleCheck className="mr-1 inline size-4 text-allow" />{ext.vendor.name} <span className="text-xs text-muted-foreground">{ext.vendor.method === "manual" ? "manually selected" : `via ${ext.vendor.method === "ntn" ? "NTN" : "fuzzy name"} (${Math.round(ext.vendor.confidence * 100)}%)`}</span></div>
+                : <p className="text-sm text-review"><TriangleAlert className="mr-1 inline size-4" />No vendor matched. Select a vendor or add one below.</p>}
+              {ext.status === "draft" && !it.score && <div className="mt-3 grid gap-2">
+                <label htmlFor={`${prefix}-vendor`} className="text-xs font-medium text-muted-foreground">Match invoice to vendor</label>
+                <select id={`${prefix}-vendor`} value={selectedVendorId} disabled={saving} onChange={(event) => setVendorChoice(event.target.value)} className="h-10 w-full min-w-0 rounded-md border border-border bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="">Select a vendor</option>{vendorOptions.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}{vendor.status === "blocked" ? " (blocked)" : ""}</option>)}</select>
+                {vendorError ? <p role="alert" className="text-xs text-blocked">{vendorError} <button type="button" className="rounded font-medium underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => void onReloadVendors()}>Retry vendor list</button></p> : !vendors && <p role="status" className="text-xs text-muted-foreground">Loading vendor list…</p>}
+                {canCreateVendor ? <Button size="sm" variant="outline" className="justify-self-start" onClick={() => setCreatingVendor(true)}><Plus />Add vendor</Button> : <p className="text-xs text-muted-foreground">Ask an accountant or owner to add a vendor if it is missing.</p>}
+                {vendorChoice !== null && selectedVendorId && <p className="text-xs text-muted-foreground">Your vendor selection will be saved when you confirm the fields.</p>}
+              </div>}
             </div>
             <div>
               <div className="mb-1.5 text-xs font-semibold">Checks</div>
@@ -193,8 +225,9 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
             </div>
             {ext.status === "draft" && !it.score && (
               <div className="rounded-md bg-review-soft px-3 py-2 text-xs text-review">
-                Some fields are below 80% confidence. Check the highlighted fields, then confirm.
-                <Button size="sm" className="mt-2 w-full" disabled={saving || !ext.vendor} onClick={confirm}>{saving && <Loader2 className="animate-spin" />}Confirm fields & score</Button>
+                Review the extracted fields and vendor match. Highlighted fields have low extraction confidence; confirmation is required before scoring.
+                {saveError && <p role="alert" className="mt-2 rounded-md bg-card px-2 py-2 text-blocked">{saveError}</p>}
+                <Button size="sm" className="mt-2 w-full" disabled={saving || !selectedVendorId} onClick={confirm}>{saving && <Loader2 className="animate-spin" />}Confirm fields & score</Button>
               </div>
             )}
             {it.score && (
@@ -213,6 +246,7 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
           </div>
         </div>
       )}
+      {canCreateVendor && ext && <VendorCreateDialog open={creatingVendor} onOpenChange={setCreatingVendor} initial={{ name: String(ext.fields.vendor_name ?? ""), ntn: String(ext.fields.ntn ?? ""), strn: String(ext.fields.strn ?? ""), iban: String(ext.fields.iban ?? "") }} onCreated={(vendor) => { setCreatedVendor({ ...vendor, status: "active" }); setVendorChoice(String(vendor.id)); void onReloadVendors(); }} />}
     </Card>
   );
 }

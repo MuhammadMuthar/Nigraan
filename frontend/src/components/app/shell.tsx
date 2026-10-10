@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import {
-  ChevronDown, Menu, ShieldCheck, Brain, ClipboardList, Eye, FileUp, Flag, LayoutDashboard, Loader2, LogOut, Moon, RotateCcw, Settings2, ShieldAlert, Sun, Users, Wallet, CalendarPlus,
+  ChevronDown, Menu, PanelLeftClose, PanelLeftOpen, ShieldCheck, Brain, ClipboardList, Eye, FileUp, Flag, LayoutDashboard, Loader2, LogOut, Moon, RotateCcw, Settings2, ShieldAlert, Sun, Users, Wallet, CalendarPlus,
 } from "lucide-react";
 import { api, getActivity, subscribeActivity } from "@/lib/api";
 import { ROLE_LABEL, useAuth } from "@/lib/auth";
@@ -35,6 +35,19 @@ const ITEM_GAP = 6; // gap-1.5
 
 type DemoStatus = { demo_mode: boolean; open_run_id: number | null; model_version: string; gemini: boolean; as_of: string | null };
 
+const SIDEBAR_KEY = "nigraan.sidebar-collapsed";
+function sidebarSnapshot() {
+  try { return window.localStorage.getItem(SIDEBAR_KEY) === "true"; } catch { return false; }
+}
+function subscribeSidebar(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener("nigraan-sidebar", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("nigraan-sidebar", callback);
+  };
+}
+
 /** Lines the approver still has to act on: locked red lines and yellow lines awaiting a second approval. */
 export function flaggedOpen(run: RunDetail | null | undefined) {
   return run ? run.lines.filter((l) => l.status === "blocked" || (l.decision === "review" && l.status === "pending")).length : 0;
@@ -50,6 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const path = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  const savedCollapsed = useSyncExternalStore(subscribeSidebar, sidebarSnapshot, () => false);
+  const [collapseOverride, setCollapseOverride] = useState<boolean | null>(null);
+  const collapsed = collapseOverride ?? savedCollapsed;
   const { data: demo } = useApi<DemoStatus>(user ? "/demo/status" : null);
   const { data: current } = useApi<{ run: RunDetail | null }>(user ? RUN_PATH : null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -110,14 +126,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const activeIndex = NAV.findIndex(({ href }) => path === href || path?.startsWith(`${href}/`));
-  const navigation = (
+  function toggleSidebar() {
+    const next = !collapsed;
+    setCollapseOverride(next);
+    try { window.localStorage.setItem(SIDEBAR_KEY, String(next)); } catch { /* Navigation works without storage. */ }
+    window.dispatchEvent(new Event("nigraan-sidebar"));
+  }
+  const navigation = (compact = false) => (
     <nav aria-label="Main navigation" className="relative flex flex-col gap-1.5">
       {activeIndex >= 0 && (
         <span aria-hidden className="absolute inset-x-0 top-0 h-11 rounded-xl border border-white/10 bg-white/10 shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)]"
           style={{ transform: `translateY(${activeIndex * (ITEM_H + ITEM_GAP)}px)` }} />
       )}
       {NAV.map((item, i) => (
-        <NavLink key={item.href} {...item} active={i === activeIndex} count={item.href === "/flagged" ? flagged : 0} onNavigate={() => setNavOpen(false)} />
+        <NavLink key={item.href} {...item} compact={compact} active={i === activeIndex} count={item.href === "/flagged" ? flagged : 0} onNavigate={() => setNavOpen(false)} />
       ))}
     </nav>
   );
@@ -131,16 +153,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <TopProgress />
       <a href="#main-content" className="fixed left-4 top-4 z-[60] -translate-y-24 rounded-lg bg-card px-4 py-2 shadow-lg focus:translate-y-0">Skip to content</a>
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/5 bg-sidebar px-5 py-7 lg:flex">
-        {brand}
-        <div className="mb-3 mt-10 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Workspace</div>
-        {navigation}
-        <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-slate-400">
+      <aside id="desktop-navigation" data-collapsed={collapsed} aria-label="Workspace sidebar" className={cn("sidebar-panel sticky top-0 hidden h-screen shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-white/5 bg-sidebar py-5 lg:flex", collapsed ? "w-20 px-3" : "w-64 px-5")}>
+        <div className={cn("mb-5 flex", collapsed ? "justify-center" : "justify-end")}>
+          <Tooltip content={collapsed ? "Expand sidebar" : "Minimize sidebar"}>
+            <Button size="icon" variant="ghost" onClick={toggleSidebar} aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"} aria-expanded={!collapsed} aria-controls="desktop-navigation" className="size-9 text-slate-300 hover:bg-white/10 hover:text-white">
+              {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
+          </Tooltip>
+        </div>
+        {collapsed ? <Link href="/run" aria-label="Nigraan home" className="mx-auto flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#0D9488] text-white"><Eye aria-hidden className="size-5" /></Link> : brand}
+        <div aria-hidden className={cn("mb-3 mt-8 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500", collapsed && "invisible px-0")}>{collapsed ? "·" : "Workspace"}</div>
+        {navigation(collapsed)}
+        {collapsed ? <Tooltip content={`Synthetic demo · model ${demo?.model_version ?? "unavailable"}`}><div className="mx-auto mt-auto pt-6 text-slate-400" tabIndex={0} aria-label={`Synthetic demonstration. Model ${demo?.model_version ?? "unavailable"}`}><ShieldCheck aria-hidden className="size-5" /></div></Tooltip> : <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-slate-400">
           <div className="mb-3 flex items-center gap-2 font-medium text-slate-200"><ShieldCheck aria-hidden className="size-4 text-teal-400" />Decision intelligence</div>
           <div className="flex items-center gap-2"><Brain aria-hidden className="size-3.5" />Model {demo?.model_version ?? "Unavailable"}</div>
-          <div className="mt-2">Document reader: {demo?.gemini ? "Gemini" : "PDF text + regex"}</div>
+          <div className="mt-2">Document reader: {demo?.gemini ? "Gemini" : "PDF text / OCR + regex"}</div>
           <div className="mt-4 border-t border-white/10 pt-3 text-[11px]">Synthetic data · fictional company<br />AICON’26 demonstration</div>
-        </div>
+        </div>}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md">
@@ -150,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SheetContent side="left" className="max-w-xs border-white/10 bg-sidebar p-6 text-white">
                 <SheetTitle className="sr-only">Workspace navigation</SheetTitle>
                 <SheetDescription className="sr-only">Navigate Nigraan’s finance workspace.</SheetDescription>
-                <div className="mb-10 pr-8">{brand}</div>{navigation}
+                <div className="mb-10 pr-8">{brand}</div>{navigation()}
               </SheetContent>
             </Sheet>
             <div className="min-w-0">
@@ -210,23 +239,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NavLink({ href, label, Icon, data, active, count, onNavigate }: (typeof NAV)[number] & { active: boolean; count: number; onNavigate: () => void }) {
+function NavLink({ href, label, Icon, data, active, count, compact, onNavigate }: (typeof NAV)[number] & { active: boolean; count: number; compact: boolean; onNavigate: () => void }) {
   const countId = useId();
-  return (
-    <Link href={href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-describedby={count ? countId : undefined}
+  const link = (
+    <Link href={href} onClick={onNavigate} aria-label={label} aria-current={active ? "page" : undefined} aria-describedby={count ? countId : undefined}
       onMouseEnter={() => prefetch(data)} onFocus={() => prefetch(data)} onTouchStart={() => prefetch(data)}
-      className={cn("group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors duration-200",
+      className={cn("group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors duration-200", compact && "justify-center",
         active ? "text-white" : "text-slate-400 hover:bg-white/5 hover:text-white")}>
-      <Icon aria-hidden className={cn("size-[18px] transition-transform duration-200 group-hover:scale-110", active && "text-teal-400")} />
-      {label}
+      <Icon aria-hidden className={cn("size-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110", active && "text-teal-400")} />
+      <span className={compact ? "sr-only" : "whitespace-nowrap"}>{label}</span>
       {count > 0 ? (
         <>
-          <span key={count} aria-hidden className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white [animation:pop-badge_0.45s_var(--ease-spring)_backwards,soft-pulse_2.4s_ease-in-out_0.6s_infinite]">{count}</span>
+          <span key={count} aria-hidden className={cn("flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white [animation:pop-badge_0.45s_var(--ease-spring)_backwards,soft-pulse_2.4s_ease-in-out_0.6s_infinite]", compact ? "absolute -right-1 -top-1 scale-90" : "ml-auto")}>{count}</span>
           <span id={countId} hidden>{count} need action</span>
         </>
-      ) : active && <span aria-hidden className="ml-auto h-1.5 w-1.5 animate-pop-badge rounded-full bg-teal-400" />}
+      ) : active && !compact && <span aria-hidden className="ml-auto h-1.5 w-1.5 animate-pop-badge rounded-full bg-teal-400" />}
     </Link>
   );
+  return compact ? <Tooltip content={label}>{link}</Tooltip> : link;
 }
 
 /** Thin bar at the top while the API is working (shown only if a request takes longer than ~200 ms). */

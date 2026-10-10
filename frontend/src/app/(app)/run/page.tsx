@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ArrowRight, CalendarPlus, CircleCheck, Download, Flag, Loader2, ShieldAlert } from "lucide-react";
 import { api, getToken, API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useApi } from "@/lib/hooks";
+import { invalidateAll, useApi } from "@/lib/hooks";
 import { dayFull, rs } from "@/lib/format";
 import type { RunDetail } from "@/lib/types";
 import { flaggedOpen, PageTitle } from "@/components/app/shell";
@@ -48,10 +48,13 @@ export default function RunPage() {
       if (!res.ok) throw new Error((await res.json()).message);
       const blob = await res.blob();
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      a.href = url;
       a.download = `nigraan_run_${run.id}.csv`;
       a.click();
-      toast.success("Bank file exported. Approved lines are now released.");
+      URL.revokeObjectURL(url);
+      toast.success("Demo CSV exported. Payments remain unsettled and included in the cash forecast.");
+      invalidateAll();
       await reload();
     } catch (e) {
       toast.error((e as Error).message);
@@ -63,7 +66,7 @@ export default function RunPage() {
   if (loading && !data) {
     return <div className="grid gap-4"><Skeleton className="h-8 w-64" /><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></div><Skeleton className="h-72" /><Skeleton className="h-64" /></div>;
   }
-  if (error) return <Empty icon={<ShieldAlert />} title="Could not load the payment run">{error.message}</Empty>;
+  if (error) return <Empty icon={<ShieldAlert />} title="Could not load the payment run"><p>{error.message}</p><Button variant="outline" className="mt-3" onClick={reload}>Retry</Button></Empty>;
   if (!run) {
     return (
       <>
@@ -88,7 +91,7 @@ export default function RunPage() {
             </Button>
           </span>
         </Tooltip>
-        <Tooltip content={run.can_export ? "Download the bank upload file (approved lines only)" : "Every line needs a decision before the bank file can be exported"}>
+        <Tooltip content={run.can_export ? "Download the demo CSV for approved lines. Account last four digits only; this does not settle payments." : "Every line needs a decision before the demo bank CSV can be exported"}>
           <span>
             <Button variant="outline" disabled={!run.can_export || !canApprove || !!busy} onClick={exportCsv}>
               {busy === "export" ? <Loader2 className="animate-spin" /> : <Download />}Export bank file
@@ -96,6 +99,7 @@ export default function RunPage() {
           </span>
         </Tooltip>
       </PageTitle>
+      <p className="mb-5 text-xs text-muted-foreground">Demo bank export contains account last four digits only. It does not send money or confirm settlement; exported payments remain forecast obligations.</p>
 
       <section aria-label="Payment run summary" className="stagger mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card><div className="p-5"><Stat label="Total payment lines" value={<CountUp value={run.lines.length} />} sub={`${rs(run.cash.run_total)} scheduled`} /></div></Card>

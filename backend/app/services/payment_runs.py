@@ -5,7 +5,7 @@ import csv
 import io
 from datetime import date, datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import exists, select, update
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError
@@ -64,9 +64,49 @@ def score_payments(db: Session, payment_ids: list[int], user: User | None = None
     return stored
 
 
+def claim_invoices(db: Session, invoice_ids: list[int]) -> None:
+    """Atomically reserve invoices on SQLite as well as PostgreSQL before inserting instructions."""
+    claimed = db.execute(update(Invoice).where(
+        Invoice.id.in_(invoice_ids), Invoice.status == "received",
+        ~exists(select(Payment.id).where(Payment.invoice_id == Invoice.id)),
+    ).values(status="scheduled").execution_options(synchronize_session=False))
+    if claimed.rowcount != len(invoice_ids):
+        raise ApiError(409, "invoice_not_open", "An invoice was already scheduled by another request", "invoice_ids")
+    # A SQLite claim may have waited for a concurrent field correction. Refresh amounts
+    # under the write lock before creating instructions from previously loaded objects.
+    db.execute(select(Invoice).where(Invoice.id.in_(invoice_ids))
+               .execution_options(populate_existing=True)).scalars().all()
+
+
+def lock_open_run(db: Session, run: PaymentRun, *, exporting: bool = False) -> None:
+    """Serialize decisions and export on both databases; stale open-state reads are insufficient."""
+    claimed = db.execute(update(PaymentRun).where(PaymentRun.id == run.id, PaymentRun.status == "open")
+                         .values(status="exported" if exporting else "open")
+                         .execution_options(synchronize_session=False))
+    if claimed.rowcount != 1:
+        raise ApiError(409, "run_closed", "This payment run is closed")
+    db.refresh(run)
+    db.expire(run, ["payments"])
+
+
 def create_run(db: Session, user: User, run_date: date, invoice_ids: list[int], name: str | None = None,
                line_meta: dict[int, dict] | None = None) -> PaymentRun:
     company = db.execute(select(Company)).scalars().first()
+    if len(invoice_ids) != len(set(invoice_ids)):
+        raise ApiError(422, "duplicate_invoice", "Each invoice can appear only once in a payment run", "invoice_ids")
+    # Lock before checking lifecycle so competing PostgreSQL requests cannot schedule the same invoice.
+    invoices = {i.id: i for i in db.execute(select(Invoice).where(Invoice.id.in_(invoice_ids))
+                                          .order_by(Invoice.id).with_for_update()).scalars()}
+    existing = set(db.execute(select(Payment.invoice_id).where(Payment.invoice_id.in_(invoice_ids))).scalars())
+    for iid in invoice_ids:
+        inv = invoices.get(iid)
+        if inv is None or inv.vendor_id is None:
+            raise ApiError(422, "invalid_invoice", f"Invoice {iid} has no matched vendor", "invoice_ids")
+        if inv.status != "received" or iid in existing:
+            raise ApiError(409, "invoice_not_open", f"Invoice {iid} is not a confirmed, unscheduled invoice", "invoice_ids")
+        if inv.total < 0:
+            raise ApiError(422, "invalid_amount", f"Invoice {iid} has a negative total", "invoice_ids")
+    claim_invoices(db, invoice_ids)
     now = utcnow()
     run = PaymentRun(company_id=company.id, name=name or f"Weekly run {run_date:%d %b %Y}", run_date=run_date,
                      status="open", created_by=user.id, created_at=now, is_live=True)
@@ -75,9 +115,7 @@ def create_run(db: Session, user: User, run_date: date, invoice_ids: list[int], 
     meta = line_meta or {}
     pay_ids = []
     for iid in invoice_ids:
-        inv = db.get(Invoice, iid)
-        if inv is None or inv.vendor_id is None:
-            raise ApiError(422, "invalid_invoice", f"Invoice {iid} has no matched vendor", "invoice_ids")
+        inv = invoices[iid]
         m = meta.get(iid, {})
         created_at = m.get("created_at") or now
         acct = active_account(db, inv.vendor_id, created_at)
@@ -157,8 +195,7 @@ def run_detail(db: Session, run: PaymentRun, with_cash: bool = True) -> dict:
 
 
 def approve_lines(db: Session, run: PaymentRun, user: User, payment_ids: list[int], note: str | None = None) -> dict:
-    if run.status != "open":
-        raise ApiError(409, "run_closed", "This payment run is closed")
+    lock_open_run(db, run)
     company = db.execute(select(Company)).scalars().first()
     ps = {p.id: p for p in run.payments}
     scores = latest_decisions(db, list(ps))
@@ -199,6 +236,7 @@ def approve_all_green(db: Session, run: PaymentRun, user: User) -> dict:
     """Bulk-approve every green line this user may approve; report the rest instead of failing."""
     if user.role not in ("approver", "owner"):
         raise ApiError(403, "forbidden", "Only an approver or the owner can release payments")
+    lock_open_run(db, run)
     company = db.execute(select(Company)).scalars().first()
     scores = latest_decisions(db, [p.id for p in run.payments])
     ok, skipped = [], []
@@ -215,10 +253,14 @@ def approve_all_green(db: Session, run: PaymentRun, user: User) -> dict:
 
 
 def hold_lines(db: Session, run: PaymentRun, user: User, payment_ids: list[int], note: str | None = None) -> dict:
+    lock_open_run(db, run)
+    ps = {p.id: p for p in run.payments}
     for pid in payment_ids:
-        p = db.get(Payment, pid)
-        if p is None or p.run_id != run.id:
+        p = ps.get(pid)
+        if p is None:
             raise ApiError(404, "not_found", f"Line {pid} is not in this run", "payment_ids")
+    for pid in payment_ids:
+        p = ps[pid]
         if p.status in ("pending", "approved"):
             p.status = "held"
             audit(db, user, "hold_payment", "payment", pid, note=note)
@@ -228,6 +270,7 @@ def hold_lines(db: Session, run: PaymentRun, user: User, payment_ids: list[int],
 
 
 def export_csv(db: Session, run: PaymentRun, user: User) -> str:
+    lock_open_run(db, run, exporting=True)
     ps = list(run.payments)
     open_lines = [p for p in ps if p.status in OPEN_STATUSES]
     if open_lines:
@@ -241,11 +284,11 @@ def export_csv(db: Session, run: PaymentRun, user: User) -> str:
     for p in approved:
         w.writerow([p.id, p.pay_date.isoformat(), p.vendor.name, p.bank_account.bank_name, p.bank_account.iban_last4,
                     f"{p.amount // 100}.{p.amount % 100:02d}", p.invoice.invoice_no])
-        p.status = "released"
-        p.invoice.status = "paid"
+        # Generating a file is not evidence of bank settlement. Keep the obligation in cash forecasts.
+        p.status = "exported"
     run.status = "exported"
     audit(db, user, "export_bank_file", "payment_run", run.id, lines=len(approved),
-          total=sum(int(p.amount) for p in approved))
+          total=sum(int(p.amount) for p in approved), settlement_confirmed=False)
     db.commit()
     runtime.bump()
     return buf.getvalue()

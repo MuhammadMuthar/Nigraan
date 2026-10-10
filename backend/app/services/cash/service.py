@@ -56,35 +56,51 @@ class CashInputs:
         inv = pd.DataFrame(db.execute(select(Invoice.id, Invoice.vendor_id, Invoice.invoice_no, Invoice.due_date,
                                              Invoice.total, Invoice.status)).all(),
                            columns=["id", "vendor_id", "invoice_no", "due_date", "total", "status"])
-        pays = pd.DataFrame(db.execute(select(Payment.id, Payment.invoice_id, Payment.amount, Payment.status,
-                                              Payment.run_id)).all(),
+        payments = list(db.execute(select(Payment)).scalars())
+        pays = pd.DataFrame([(p.id, p.invoice_id, p.amount, p.status, p.run_id) for p in payments],
                             columns=["id", "invoice_id", "amount", "status", "run_id"])
-        in_open_runs = set()
-        open_ids = [x for (x,) in db.execute(select(PaymentRun.id).where(PaymentRun.status == "open")).all()]
-        if open_ids:
-            in_open_runs = set(pays.loc[pays["run_id"].isin(open_ids), "invoice_id"].astype(int))
+        outstanding = [p for p in payments if p.status not in ("released", "rejected")]
+        # Each scheduled obligation belongs to its payment line even after a run is exported.
+        # Held/blocked lines must not silently reappear as generic weekly invoice payments.
+        assigned_invoices = {p.invoice_id for p in outstanding}
         vnames = dict(db.execute(select(Vendor.id, Vendor.name)).all())
-        self.payables = payable_flows(inv, pays[pays["status"] == "released"], self.as_of, in_open_runs, vnames)
+        self.payables = payable_flows(inv, pays[pays["status"] == "released"], self.as_of, assigned_invoices, vnames)
+        # Historical ledger rows with a future value date still reduce future cash. Payments
+        # before as_of are already reflected in the supplied opening balance and stay excluded.
+        self.future_settlements = run_flows([
+            {"id": p.id, "amount": int(p.amount), "pay_date": p.pay_date,
+             "label": f"{p.vendor.name} (recorded payment)"}
+            for p in payments if p.status == "released" and p.pay_date >= self.as_of
+        ])
         self.run = run
         self.lines: list[dict] = []
-        if run is not None:
-            ps = list(run.payments)
-            scores = latest_decisions(db, [p.id for p in ps])
-            for p in ps:
-                d = effective_decision(p, scores.get(p.id))
-                self.lines.append({"id": p.id, "amount": int(p.amount), "pay_date": max(p.pay_date, self.as_of),
-                                   "label": f"{p.vendor.name} (this run)", "decision": d, "status": p.status})
+        self.other_lines: list[dict] = []
+        outstanding_ids = {p.id for p in outstanding}
+        displayed = [p for p in payments if p.id in outstanding_ids or (run is not None and p.run_id == run.id)]
+        scores = latest_decisions(db, [p.id for p in displayed])
+        for p in displayed:
+            selected = run is not None and p.run_id == run.id
+            line = {"id": p.id, "amount": int(p.amount), "pay_date": max(p.pay_date, self.as_of),
+                    "label": f"{p.vendor.name} ({'this run' if selected else 'scheduled payment'})",
+                    "decision": effective_decision(p, scores.get(p.id)), "status": p.status}
+            (self.lines if selected else self.other_lines).append(line)
 
     def base_flows(self) -> list[Flow]:
-        return self.receipts + self.outflows + self.payables
+        return self.receipts + self.outflows + self.payables + self.future_settlements + self._line_flows(self.other_lines, "nigraan")
 
     def line_flows(self, mode: str) -> list[Flow]:
         """mode: 'nigraan' (red blocked, held/rejected out), 'all' (release everything), 'green_only'."""
+        return self._line_flows(self.lines, mode)
+
+    @staticmethod
+    def _line_flows(lines: list[dict], mode: str) -> list[Flow]:
         sel = []
-        for l in self.lines:
+        for l in lines:
             if l["status"] in ("rejected", "released"):
                 continue
-            if mode == "all":
+            # Exported instructions are committed outflows until settlement is reconciled.
+            # A What-if toggle must not pretend it can withdraw an already exported file.
+            if l["status"] == "exported" or mode == "all":
                 sel.append(l)
             elif mode == "nigraan":
                 if l["decision"] != "blocked" and l["status"] not in ("held", "blocked"):
@@ -185,6 +201,7 @@ def outlook(db: Session, run_id: int | None, hold_yellow: bool = False) -> dict:
                 "Expected receipt date = due date + the customer's median past delay (segment median if < 5 settled invoices).",
                 "Disputed amounts are excluded.",
                 "Vendor invoices are paid in the weekly run that covers their due date.",
+                "Bank-file export is not settlement; exported instructions remain cash outflows at their value date until reconciled.",
                 "Utility bills after this month are estimates (assumption)."],
             "basis_legend": {"fact": "Contracted or already approved", "estimate": "Model estimate (expected date)",
                              "assumption": "Assumption"}}

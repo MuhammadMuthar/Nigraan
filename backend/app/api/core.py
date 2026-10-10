@@ -164,6 +164,7 @@ def vendor_risk(vendor_id: int, db: Session = Depends(get_db), user: User = Depe
                           "valid_from": a.valid_from.isoformat() + "Z",
                           "valid_to": a.valid_to.isoformat() + "Z" if a.valid_to else None,
                           "changed_by": users.get(a.changed_by), "approved_by": users.get(a.approved_by),
+                          "changed_by_id": a.changed_by, "approved_by_id": a.approved_by,
                           "source": a.change_source, "blocked": a.is_blocked} for a in v.bank_accounts],
         "stats": {"payments": len(amounts), "median": int(pd.Series(amounts).median()) if amounts else None,
                   "total": int(sum(amounts))},

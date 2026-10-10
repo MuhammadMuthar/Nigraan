@@ -2,12 +2,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ShieldAlert } from "lucide-react";
+import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { useApi } from "@/lib/hooks";
 import { dateTime, rs } from "@/lib/format";
 import { PageTitle } from "@/components/app/shell";
 import { FRAUD_NAMES, ScoreBar } from "@/components/app/decision";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Empty, Skeleton } from "@/components/ui/misc";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -25,8 +26,13 @@ const STATUS: Record<string, { label: string; variant: "blocked" | "allow" | "de
 export default function CasesPage() {
   const router = useRouter();
   const [tab, setTab] = useState("auto");
+  const [retrying, setRetrying] = useState(false);
   const path = tab === "auto" ? "/cases?source=auto" : tab === "open" ? "/cases?status=open" : "/cases?source=historical";
-  const { data, loading } = useApi<CaseRow[]>(path);
+  const { data, loading, error, reload } = useApi<CaseRow[]>(path);
+  async function retry() {
+    setRetrying(true);
+    try { await reload(); } finally { setRetrying(false); }
+  }
   return (
     <>
       <PageTitle title="Cases" sub="Every red line opens a case automatically. Outcomes become training labels for the next retrain." />
@@ -38,7 +44,9 @@ export default function CasesPage() {
         </TabsList>
       </Tabs>
       <Card className="mt-4 animate-rise-in overflow-hidden [animation-delay:80ms]">
-        {loading && !data ? <div className="p-4"><Skeleton className="h-40" /></div> : !data || data.length === 0 ? (
+        {error ? (
+          <div className="p-4" role="alert"><Empty icon={<ShieldAlert />} title="Cases unavailable"><p>{error.message}</p><Button variant="outline" className="mt-3" onClick={retry} disabled={retrying}>{retrying ? <Loader2 className="animate-spin" /> : <RefreshCw />}Retry cases</Button></Empty></div>
+        ) : loading && !data ? <div className="p-4"><Skeleton className="h-40" /></div> : !data || data.length === 0 ? (
           <div className="p-4"><Empty icon={<ShieldAlert />} title="No cases here">Load the demo week to see Nigraan open cases for blocked lines.</Empty></div>
         ) : (
           <Table>

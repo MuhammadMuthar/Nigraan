@@ -27,7 +27,7 @@ type Filter = "flagged" | "blocked" | "review" | "allow" | "all";
 const FILTERS: Filter[] = ["flagged", "blocked", "review", "allow", "all"];
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Awaiting approval", approved: "Approved", blocked: "Locked", held: "Held", rejected: "Rejected (fraud)", released: "Released",
+  pending: "Awaiting approval", approved: "Approved", blocked: "Locked", held: "Held", rejected: "Rejected (fraud)", released: "Settled", exported: "Exported · unsettled",
 };
 
 function matches(l: RunLine, f: Filter) {
@@ -69,7 +69,7 @@ function FlaggedInvoices() {
     setBusy(kind + ids.join(","));
     try {
       await api.post(`/payment-runs/${run.id}/${kind}`, { payment_ids: ids, note });
-      toast.success(kind === "approve" ? "Released for payment." : "Line held.");
+      toast.success(kind === "approve" ? "Approved for payment." : "Line held.");
       setReview(null);
       await reload();
     } catch (e) {
@@ -80,7 +80,7 @@ function FlaggedInvoices() {
   }
 
   if (loading && !data) return <Loading />;
-  if (error) return <Empty icon={<ShieldAlert />} title="Could not load the flagged invoices">{error.message}</Empty>;
+  if (error) return <Empty icon={<ShieldAlert />} title="Could not load the flagged invoices"><p>{error.message}</p><Button variant="outline" className="mt-3" onClick={reload}>Retry</Button></Empty>;
   if (!run) {
     return (
       <>

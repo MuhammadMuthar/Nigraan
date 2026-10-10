@@ -6,7 +6,15 @@ from __future__ import annotations
 import io
 import re
 import shutil
+import subprocess
+import tempfile
+import time
 from datetime import date, datetime
+from pathlib import Path
+
+MAX_PDF_PAGES = 10
+MAX_IMAGE_PIXELS = 20_000_000
+PDF_OCR_TIMEOUT_S = 30
 
 LABELS = {
     "invoice_no": r"(?:Invoice\s*No\.?:?|Invoice\s*#|Bill\s*No\.?:?|Inv\.?\s*No\.?:?)\s*([A-Za-z0-9][A-Za-z0-9/\-\.]*)",
@@ -28,6 +36,8 @@ def pdf_text(data: bytes) -> str:
     from pypdf import PdfReader
 
     reader = PdfReader(io.BytesIO(data))
+    if len(reader.pages) > MAX_PDF_PAGES:
+        raise ValueError(f"PDF exceeds the {MAX_PDF_PAGES}-page extraction limit")
     return "\n".join((p.extract_text() or "") for p in reader.pages)
 
 
@@ -39,11 +49,54 @@ def ocr_available() -> bool:
     return shutil.which("tesseract") is not None
 
 
-def image_text(data: bytes) -> str:
+def pdf_ocr_available() -> bool:
+    return ocr_available() and shutil.which("pdftoppm") is not None
+
+
+def image_text(data: bytes, timeout_s: float = 10) -> str:
     import pytesseract
     from PIL import Image
 
-    return pytesseract.image_to_string(Image.open(io.BytesIO(data)))
+    with Image.open(io.BytesIO(data)) as image:
+        if image.width * image.height > MAX_IMAGE_PIXELS:
+            raise ValueError("Image is too large for OCR")
+        return pytesseract.image_to_string(image, timeout=timeout_s)
+
+
+def pdf_image_text(data: bytes) -> str:
+    """Rasterize a scanned PDF for OCR, with bounded pages, resolution and runtime.
+
+    Poppler and Tesseract remain optional system dependencies. No shell command or original
+    filename is used, and temporary document images are removed after extraction.
+    """
+    from pypdf import PdfReader
+
+    if not pdf_ocr_available():
+        raise RuntimeError("Scanned PDF OCR requires pdftoppm and Tesseract")
+    pages = len(PdfReader(io.BytesIO(data)).pages)
+    if not 0 < pages <= MAX_PDF_PAGES:
+        raise ValueError(f"PDF must contain 1-{MAX_PDF_PAGES} pages")
+    deadline = time.monotonic() + PDF_OCR_TIMEOUT_S
+    with tempfile.TemporaryDirectory(prefix="nigraan-pdf-ocr-") as temp:
+        directory = Path(temp)
+        document, output = directory / "document.pdf", directory / "page"
+        document.write_bytes(data)
+        subprocess.run(
+            [shutil.which("pdftoppm"), "-f", "1", "-l", str(pages), "-scale-to", "2200",
+             "-gray", "-png", str(document), str(output)],
+            check=True, timeout=min(15, PDF_OCR_TIMEOUT_S), stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        images = sorted(directory.glob("page-*.png"))
+        if len(images) != pages:
+            raise RuntimeError("PDF rasterization did not produce every page")
+        text = []
+        for image in images:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("Scanned PDF OCR timed out")
+            text.append(image_text(image.read_bytes(), timeout_s=min(10, remaining)))
+        return "\n".join(text)
 
 
 def _num(s: str | None) -> float | None:

@@ -103,11 +103,19 @@ def resolve(db: Session, case: Case, user: User, outcome: str, note: str | None,
             v.status, v.blocked_at = "blocked", now
             audit(db, user, "block_vendor", "vendor", v.id, case_id=case.id)
     else:
-        # The model's red decision is kept on record; an explicit override lets a second approver release it.
-        p.status = "pending"
-        p.override_decision = "review"
-        p.override_by = user.id
-        audit(db, user, "override_decision", "payment", p.id, from_decision="blocked", to_decision="review", note=note)
+        # The model's red decision stays on record. Only unsettled, live instructions can
+        # return to approval; resolving a historical case must not rewrite a settled ledger.
+        if p.status not in ("released", "exported") and p.run is not None and p.run.is_live:
+            p.status = "pending"
+            p.override_decision = "review"
+            p.override_by = user.id
+            if p.run.status == "exported":
+                # Existing exported lines remain immutable. A subsequent file contains only
+                # the newly approved recovery, so the earlier instructions are never duplicated.
+                p.run.status = "open"
+                audit(db, user, "reopen_run", "payment_run", p.run.id, case_id=case.id,
+                      reason="false_alarm_recovered")
+            audit(db, user, "override_decision", "payment", p.id, from_decision="blocked", to_decision="review", note=note)
     db.add(CaseEvent(case_id=case.id, at=now, user_id=user.id, kind=outcome,
                      detail_json={"note": note, "block_vendor": block_vendor}))
     audit(db, user, "resolve_case", "case", case.id, outcome=outcome, note=note)
