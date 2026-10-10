@@ -44,53 +44,55 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-[#0b3b37] p-12 text-white lg:flex">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-md bg-white/10"><Eye className="size-5" /></div>
-          <div className="text-lg font-bold tracking-tight">Nigraan <span className="font-normal text-white/60">نگران</span></div>
+    <div className="grid min-h-screen lg:grid-cols-[1fr_1fr]">
+      <section className="relative hidden flex-col justify-between overflow-hidden bg-[#0B1422] p-12 text-white lg:flex xl:p-16" aria-label="About Nigraan">
+        <div className="flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-[#0D9488]"><Eye aria-hidden className="size-6" /></div>
+          <div className="text-2xl font-semibold tracking-tight">Nigraan <span className="ml-1 text-lg font-normal text-slate-400">نگران</span></div>
         </div>
-        <div className="max-w-lg">
-          <h1 className="text-3xl font-semibold leading-tight">Checks every rupee going out, and tells you whether what&apos;s coming in will cover it.</h1>
-          <p className="mt-4 text-white/70">A finance control tower for Pakistani SMEs. Before the weekly payment run, every line gets a verdict with reasons, and you see whether cash stays above your reserve.</p>
-          <div className="mt-8 grid gap-4 text-sm">
-            <div className="flex gap-3"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-emerald-300" /><div><b>Fraud firewall.</b> Duplicate detector, risk model, anomaly detector and relationship graph score every payment. Red lines cannot be released.</div></div>
-            <div className="flex gap-3"><Wallet className="mt-0.5 size-5 shrink-0 text-emerald-300" /><div><b>13-week cash.</b> Late-payment model on receivables plus a deterministic cash engine that catches mid-week reserve breaches.</div></div>
+        <div className="max-w-lg py-12">
+          <div className="mb-6 text-xs font-medium uppercase tracking-[0.2em] text-teal-300">Finance control tower / Pakistan</div>
+          <h1 className="text-4xl font-semibold leading-[1.15] tracking-tight xl:text-5xl">Every rupee.<br />A clearer decision.</h1>
+          <p className="mt-6 max-w-md text-base leading-relaxed text-slate-300">Check what goes out. See whether what comes in will cover it. Bring payment risk and cash visibility into one workspace.</p>
+          <div className="mt-10 grid gap-5 border-t border-white/10 pt-8">
+            <div className="flex gap-4"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"><ShieldCheck aria-hidden className="size-5 text-teal-300" /></span><div><h2 className="text-sm font-semibold">Investigate before you pay</h2><p className="mt-1 text-sm leading-relaxed text-slate-400">Invoice, bank and relationship evidence behind every risk verdict. Blocked lines stay locked.</p></div></div>
+            <div className="flex gap-4"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"><Wallet aria-hidden className="size-5 text-teal-300" /></span><div><h2 className="text-sm font-semibold">Look 13 weeks ahead</h2><p className="mt-1 text-sm leading-relaxed text-slate-400">Understand the reserve impact with facts, estimates and assumptions clearly separated.</p></div></div>
           </div>
         </div>
-        <div className="text-xs text-white/50">AICON&apos;26 Build With AI · Financial Operations · 100% synthetic data, fictional company</div>
-      </div>
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <h2 className="text-xl font-semibold">Sign in</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Bismillah Distributors (fictional), Lahore</p>
+        <div className="flex flex-wrap justify-between gap-2 border-t border-white/10 pt-5 text-xs text-slate-400"><span>AICON’26 · Financial Operations</span><span>Synthetic data only</span></div>
+      </section>
+      <main className="flex items-center justify-center px-5 py-10 sm:px-10">
+        <div className="w-full max-w-md">
+          <div className="mb-8 flex items-center gap-2 text-lg font-semibold lg:hidden"><span className="flex size-9 items-center justify-center rounded-xl bg-[#0D9488] text-white"><Eye className="size-5" /></span>Nigraan <span className="text-muted-foreground">نگران</span></div>
+          <div className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-accent">Welcome to your workspace</div>
+          <h2 className="text-3xl font-semibold tracking-tight">Sign in to Nigraan</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Bismillah Distributors · Lahore<br /><span className="text-xs">Fictional company · 100% synthetic demo data</span></p>
           {demoUsers.length > 0 && (
-            <div className="mt-6">
-              <Label>Demo users (password: <span className="font-mono">nigraan-demo</span>)</Label>
-              <div className="mt-2 grid gap-2">
+            <section className="mt-7" aria-labelledby="demo-heading">
+              <div className="mb-3 flex items-center justify-between"><h3 id="demo-heading" className="text-sm font-semibold">Choose a demo role</h3><span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">One-click access</span></div>
+              <div className="grid gap-2.5">
                 {demoUsers.map((u) => (
                   <button key={u.id} type="button" disabled={busy}
                     onClick={() => { setEmail(u.email); setPassword("nigraan-demo"); submit(undefined, u.email, "nigraan-demo"); }}
-                    className="group flex items-center justify-between rounded-md border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-accent hover:bg-accent-soft/50">
-                    <div>
-                      <div className="text-sm font-medium">{u.name} <span className="text-xs font-normal text-muted-foreground">· {ROLE_LABEL[u.role]}</span></div>
-                      <div className="text-xs text-muted-foreground">{ROLE_HELP[u.role]}</div>
-                    </div>
-                    <ArrowRight className="size-4 text-muted-foreground group-hover:text-accent" />
+                    className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-[0_2px_6px_rgba(11,20,34,0.02)] transition-colors hover:border-accent/50 hover:bg-accent-soft/40 disabled:opacity-50">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">{u.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}</span>
+                    <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{u.name} <span className="text-xs font-normal text-muted-foreground">· {ROLE_LABEL[u.role]}</span></span><span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{ROLE_HELP[u.role]}</span></span>
+                    <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground group-hover:text-accent" />
                   </button>
                 ))}
               </div>
-              <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border" />or<div className="h-px flex-1 bg-border" /></div>
-            </div>
+              <p className="mt-3 text-xs text-muted-foreground">Demo password: <span className="font-mono">nigraan-demo</span>. Each role keeps its own permissions.</p>
+              <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border" />or use your credentials<div className="h-px flex-1 bg-border" /></div>
+            </section>
           )}
-          <form onSubmit={submit} className="grid gap-3">
-            <div className="grid gap-1.5"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required /></div>
+          <form onSubmit={submit} className="grid gap-4" aria-busy={busy}>
+            <div className="grid gap-1.5"><Label htmlFor="email">Email address</Label><Input id="email" type="email" placeholder="you@company.pk" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required /></div>
             <div className="grid gap-1.5"><Label htmlFor="pw">Password</Label><Input id="pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></div>
-            {err && <div className="rounded-md bg-blocked-soft px-3 py-2 text-sm text-blocked">{err}</div>}
-            <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" />}Sign in</Button>
+            {err && <div role="alert" className="rounded-xl border border-blocked/20 bg-blocked-soft px-3 py-2 text-sm text-blocked">{err}</div>}
+            <Button className="h-11" type="submit" disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <ArrowRight />} {busy ? "Signing in…" : "Sign in"}</Button>
           </form>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
