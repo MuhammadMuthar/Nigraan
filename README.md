@@ -1,191 +1,315 @@
-# Nigraan (نگران): finance control tower for Pakistani SMEs
+# Nigraan (نگران)
 
-**Nigraan checks every rupee going out, and tells you whether what's coming in will cover it.**
+**Investigate before you pay. See the cash impact before you commit.**
 
-Before the weekly payment run, every vendor payment gets a green / yellow / red verdict with evidence from a firewall combining learned models and deterministic controls. The owner also sees a 13-week cash outlook, with unconfirmed stale collections excluded from base cash. Receipt estimates have a four-week synthetic backtest; the full horizon is not validated.
+Nigraan is a finance control tower for Pakistani small and medium-sized businesses. It helps an accountant prepare supplier payments, an approver investigate suspicious invoices, and an owner see whether upcoming collections can cover those payments.
 
-- **Live app:** `https://<your-vercel-app>.vercel.app` *(set after deploy, see [Deploy](#deploy))*
-- **API docs (the contract):** `https://<your-render-api>.onrender.com/docs`
-- **Demo video:** *(link placeholder)*
-- AICON'26 Build With AI · Financial Operations · team: Mutahar, Uswa
+It brings two questions into one workflow: **Should this payment go out, and can we afford it?**
 
-## Try the demo week (2 minutes)
+Built for **AICON’26 · Build With AI · Financial Operations** by Mutahar and Uswa. The MVP uses a fictional distributor and synthetic data. It exports demo payment instructions; it does not transfer money.
 
-1. On the login page, click **Haji Abdul Rashid (Owner)** to reset the fictional company. Password for all demo users: `nigraan-demo`.
+[Demo frontend](https://nigraan-one.vercel.app) · [Quick start](#quick-start) · [Demo walkthrough](#demo-walkthrough) · [Evaluation](#evaluation) · [Testing](#testing) · [Documentation](#documentation)
 
-   | User | Role | Can |
-   |---|---|---|
-   | sana@bismillah.pk | Accountant | enter invoices, prepare the run |
-   | bilal@bismillah.pk | Approver | approve green, second-approve yellow, resolve cases |
-   | rashid@bismillah.pk | Owner | everything, including payments above the Rs 5 lakh limit |
+## What Nigraan does
 
-2. In **Demo controls**, click **Reset data** (owner only). Sign out, sign in as **Sana Iqbal (Accountant)**, then **Load demo week**. Forty invoices are imported and scored. Prepare this before the presentation timer starts.
-3. **Payment run.** Read actual line counts, blocked amount, rules comparison and reserve outcome. Compare *With Nigraan* and *If every line were released*. Unconfirmed overdue collections are excluded: neither scenario guarantees staying above the reserve. Basic/expert rule flags are review checks, not authorization or proven fraud.
+An SME can receive a duplicate invoice, a suspicious bank-change request or several payments that bypass an approval limit. Even legitimate bills can create a cash shortfall when customers pay late. Nigraan helps the team investigate those risks before approving a weekly payment run.
 
-   Below the panel, *Needs your attention* previews the riskiest lines.
-4. Open **Flagged invoices** in the left menu (the red badge counts lines awaiting a decision): 7 red lines (locked, *View case*) and a few yellow lines (second approver); the *Allow* and *All* filters show the green lines. Click a line for the evidence drawer, or **View case** on a red line. The evidence depends on the pattern:
-   - duplicate invoices side by side;
-   - the bank-change timeline;
-   - the vendor → phone → employee graph path (animated, labels never covered by lines);
-   - SHAP reason bars, a guarded summary, the suggested verification step, and the full agent trace with timings.
-5. Sign out, sign in as **Haji Abdul Rashid (Owner)**. Then:
-   - **Approve all green**;
-   - Resolve a case after recording verification checks, method, evidence reference and finding (describe demo outcomes as synthetic);
-   - A false-alarm clearer cannot approve that payment; another person must approve, and combined vendor commitments over Rs 5 lakh require the owner;
-   - **Retrain** remains available: outcomes become labels and the model version bumps. Keep it outside the five-minute pitch; new model artifacts invalidate the saved review study.
-6. **Upload invoices.** Click a sample (no files needed). Fields fill in with per-field confidence, and the re-sent invoice is blocked as an exact duplicate.
-7. **Cash outlook.** 13-week chart (facts, model estimates and assumptions shown differently), daily drill-down, receivables by late risk, and a *What if* that moves a collection.
-8. **Dashboard.** Rupees protected, open cases, alerts by pattern, and model metrics vs baseline.
+![Nigraan Payment Run showing payment totals, blocked amounts, reserve outcome and rule comparisons](docs/screenshots/payment-run.png)
 
-## The problem
+*Payment Run in the synthetic local demo. Amounts and payment states change with decisions; this screenshot shows a run after pending lines were decided.*
 
-- **Fraud.** Occupational fraud costs organisations about **5% of revenue** a year, and the typical scheme runs about **12 months** before it is detected (ACFE, *Occupational Fraud 2024: A Report to the Nations*). Small businesses lose a larger share because they have fewer controls. In a Pakistani SME the same 3-4 people enter invoices, change vendor bank details and approve the weekly run, often on WhatsApp at night.
-- **Cash.** Distributors sell on 15-45 day credit to kiryana stores and wholesalers who pay late, especially around Eid. A payment run that looks affordable on Monday can push cash below the reserve before Friday.
-- **Digitisation.** FBR's e-invoicing and POS integration push SMEs toward digital invoices. The data now exists to check every payment, but nobody has time to read it.
+| Area | What you can do |
+| --- | --- |
+| **Payment Run** | See actual line counts, amounts needing attention and cash-reserve outcomes. Compare the hybrid detector with basic and expert rules; approve eligible lines and export a demo bank CSV. |
+| **Flagged Invoices** | Search and filter payment lines, inspect evidence, approve eligible payments or hold them for investigation. |
+| **Cases** | Review invoice pairs, bank history, relationship matches, model contributions and the audit trace. Record verification and a case outcome, with English/Roman Urdu support. |
+| **Upload** | Extract fields from PDF/image invoices, inspect confidence, correct fields, match a vendor, confirm the invoice and score it. Sample files are included. |
+| **Cash Outlook** | Inspect a 13-week projection, drill into daily movements and test collection scenarios without changing the ledger. Facts, estimates and assumptions are identified separately. |
+| **Dashboard** | Review operational metrics and saved model evaluations with explicit synthetic-data and measurement-period labels. |
+| **Vendors** | Create vendors, inspect history and request bank-detail changes that require independent approval. |
 
-## What makes it AI-native
+The interface includes a collapsible sidebar, mobile navigation, keyboard focus states, light/dark themes and reduced-motion support.
 
-The product cannot work without the models; ML and deterministic code make every decision. The LLM only reads documents and writes explanations.
+## Quick start
 
-| Component | Model or method | Contribution |
-|---|---|---|
-| Duplicate detector | Logistic regression on invoice-pair features (normalised-number similarity, date gap, amount difference, line-item overlap, TF-IDF char n-grams) | Catches `INV-0102` vs `INV-102` with a 0.5% change, while ignoring legit weekly standing orders that exact-match rules confuse |
-| Risk model | XGBoost on 27 leakage-safe behaviour features, with SHAP reasons mapped to plain English ("Bank account changed 2 hours before this payment") | Fraud is a combination of weak signals: timing, bank changes, price vs history, approval-limit gaps |
-| Anomaly detector | Isolation Forest | Unseen patterns |
-| Relationship graph | Deterministic NetworkX matching over vendors, employees, users, bank/CNIC hashes, phones, addresses (time-valid edges) | Shared identifiers provide traceable evidence; disclosed related parties are down-weighted. This engine is not learned ML. |
-| Fusion | Weighted engine signals calibrated on out-of-time folds; hard rules can force a block | One explainable risk score, fixed bands at 40 / 75; not a probability |
-| Late-payment model | XGBoost vs logistic regression vs baseline (shipped XGBoost on validation PR-AUC) | Predicts at issue date which receivables will be paid late |
-| Cash engine | Deterministic daily engine, 13 weeks | Facts and estimates stay separate; mid-week breaches are caught |
-| Document reader | Gemini Flash with a strict JSON schema, cross-checked by PDF text/OCR + regex and validators | The LLM reads documents; deterministic agreement sets the confidence |
-| Case summary | Gemini, structured evidence only, number-check guardrail | Explanations for approvers; never a score |
+### Prerequisites
 
-Learning loop: case outcomes (confirmed fraud / false alarm) become labels, and **Retrain** refits the engines and bumps `model_version`.
+- **Python 3.11** and **Node.js 22**, matching the CI environment.
+- Git and npm. PostgreSQL and Docker are optional; the default local database is SQLite.
+- For scanned PDF extraction: **Tesseract** and **Poppler** (`pdftoppm`). Text PDFs and included samples can be used without a Gemini key.
 
-## Architecture
+The trained models and demo invoices are committed. **No training or cloud credentials are needed to start the local demo.**
+
+Clone the repository:
+
+```bash
+git clone https://github.com/MuhammadMuthar/Nigraan.git
+cd Nigraan
+```
+
+### Terminal 1: backend
+
+From the repository root:
+
+```bash
+cd backend
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+On Windows, use a Python 3.11 interpreter to create the environment and activate it with `.venv\Scripts\Activate.ps1` in PowerShell.
+
+The first startup seeds an empty database with the fictional company. Local state is stored in `backend/nigraan.db`. Keep this terminal running.
+
+### Terminal 2: frontend
+
+From the repository root:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+The frontend defaults to the API at `http://localhost:8000`. For a different backend, set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to the backend origin, without `/api/v1`, then restart Next.js.
+
+| Local service | Address |
+| --- | --- |
+| Application | `http://localhost:3000` |
+| Interactive API documentation | `http://localhost:8000/docs` |
+| API health and model version | `http://localhost:8000/health` |
+
+The API routes use the `/api/v1` prefix.
+
+### Optional: API and PostgreSQL with Docker
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+This starts PostgreSQL on port 5432 and the API on port 8000. Run the frontend separately using Terminal 2 above. Stop a native API using port 8000 before starting Compose. The API image includes Tesseract and Poppler; the Compose credentials are local demo credentials.
+
+## Demo walkthrough
+
+The seeded company is **Bismillah Distributors**. Its history and demonstration week are anchored to **12 October 2026**, rather than the computer’s current date.
+
+All demo accounts use the password **`nigraan-demo`**. The login page provides shortcuts for the three main roles:
+
+| User | Email | Role and principal actions |
+| --- | --- | --- |
+| Sana Iqbal | `sana@bismillah.pk` | **Accountant:** upload/correct invoices, prepare payment runs, create vendors and request bank changes. |
+| Bilal Ahmed | `bilal@bismillah.pk` | **Approver:** approve eligible payments, resolve cases, approve another user’s bank change, export and retrain. |
+| Haji Abdul Rashid | `rashid@bismillah.pk` | **Owner:** also prepare invoices/vendors, approve above-limit vendor commitments and reset the demo. |
+
+A second accountant, `kashif@bismillah.pk`, is also seeded. Role permissions and independence checks apply to the owner too.
+
+1. Sign in as **Rashid**, open **Demo controls** and select **Reset data**. Reset replaces the demo database and removes in-session work.
+2. Sign out, sign in as **Sana** and select **Load demo week**. The included 40 invoices are imported and scored.
+3. Open **Payment Run**, then **Flagged Invoices**. Read the current counts, blocked amount and reserve result; they change with decisions and model state.
+4. Open one blocked **Case**. Inspect its evidence and model contributions, verification checklist, score breakdown and English/Roman Urdu explanation.
+5. Use an **Approver/Owner** session to record a verification method, checks, reference, finding and outcome. Describe any demonstration finding as synthetic. Use a different person to approve a payment whose case was cleared.
+6. Approve eligible lines and hold other pending lines. Export becomes available when no pending line needs a decision and at least one line is approved.
+7. In **Upload**, try an included sample, review confidence and extracted fields, confirm when prompted, then inspect the score. The resent sample demonstrates duplicate detection.
+8. In **Cash Outlook**, drill into a week and test a collection-date assumption. Finish on **Dashboard** to inspect the evaluation and its limits.
+
+**Payment safeguards:** review-line creators cannot approve their own line; a false-alarm clearer cannot approve that payment. Combined vendor commitments above **PKR 500,000** within the current run require owner approval. These commitments include pending, approved and exported lines. A green classification is not payment approval.
+
+**Bank export:** the CSV contains account last-four digits and demo instructions. It does not send money or confirm settlement. Exported amounts remain outstanding in the cash forecast.
+
+Prepare reset/load before a presentation timer starts. Keep retraining outside the timed demo: it changes the runtime model version and invalidates the saved review study for that runtime. Reset reloads the shipped models. See the [presentation guide](docs/demo-guide.md) for a complete product demonstration and pilot plan.
+
+## How AI and controls work together
 
 ```mermaid
 flowchart LR
-  PDF[Invoice PDF] --> DR[Document reader<br/>Gemini + regex + validators]
-  CSV[ERP CSV] --> INV[(Invoices)]
-  DR --> INV --> RUN[Weekly payment run]
-  RUN --> FW{{Fraud firewall<br/>rules · duplicate LR · XGBoost · Isolation Forest · graph}}
-  FW --> FUSE[Fusion → Allow / Review / Blocked]
-  FUSE -->|red| CASE[Case: evidence, graph path,<br/>SHAP, guarded summary]
-  CASE -->|outcome| LBL[(Labels)] --> RT[Retrain]
-  REC[(Receivables)] --> LATE[Late-payment model] --> CASH[13-week cash engine]
-  FUSE -->|green + yellow| CASH --> PANEL[Cash panel on the run:<br/>low point, first breach, who to chase]
+    INPUT[Invoice PDF/image or ERP CSV] --> REVIEW[Extract, review and confirm]
+    REVIEW --> RUN[Prepare payment run]
+    RUN --> SCORE[Learned models + deterministic checks]
+    SCORE --> DECISION[Allow / Review / Blocked]
+    DECISION -->|Review or Blocked| CASE[Evidence and human verification]
+    DECISION -->|Allow| APPROVAL[Policy-controlled approval]
+    CASE -->|Verified legitimate| APPROVAL
+    DECISION --> CASH[Cash and reserve scenarios]
+    RECEIPTS[Receivables and collection assumptions] --> CASH
+    APPROVAL --> EXPORT[Masked demo bank CSV]
 ```
 
-More in [docs/architecture.md](docs/architecture.md).
+| Component | Method | Purpose |
+| --- | --- | --- |
+| Duplicate detector | Logistic regression on invoice-pair features | Compare similar invoice numbers, amounts, dates and line items. |
+| Behavioural risk | XGBoost with feature-contribution reasons | Assess combinations of signals such as timing, vendor history and bank changes. |
+| Anomaly detector | Isolation Forest | Identify unusual payment behaviour. |
+| Relationship evidence | Deterministic NetworkX matching | Trace shared identifiers and relationships that require investigation. |
+| Policy and fusion | Deterministic rules plus calibrated engine signals | Combine evidence into a risk score and enforce known blocking rules. |
+| Late-payment risk | XGBoost | Prioritize receivables likely to be paid late. Collection dates use explicit historical-delay assumptions. |
+| Cash calculation | Deterministic daily arithmetic | Project cash movements and reserve breaches over 13 weeks. |
+| Document extraction and explanations | Optional Gemini, validators and labelled fallbacks | Read documents and explain structured evidence. |
 
-## Evaluation: how we measured, and against what
+The displayed risk score is **not a fraud probability**. Its bands are Allow below 40, Review from 40 to below 75, and Blocked from 75; hard rules can force a block. Relationship matches are evidence to investigate, not proof of wrongdoing.
 
-`python -m ml.evaluate --months 11-12 --seeds 42,43,44,45,46` writes [models/metrics.json](models/metrics.json) plus [docs/confusion_matrix.png](docs/confusion_matrix.png) and [docs/pr_curve.png](docs/pr_curve.png). Models train on months 1-10 and are tested on **months 11-12, which they never saw**. The additional expert comparison and feature study are in [models/review_eval.json](models/review_eval.json); conservative receipt-policy results are in [models/cash_review_metrics.json](models/cash_review_metrics.json).
+Gemini does not calculate risk scores, cash balances or payment permissions. Without a key, extraction uses PDF text/OCR and regex; explanations use a labelled template fallback. Model evidence and generated summaries remain distinct.
 
-**Fraud firewall** (638 payments, 22 planted frauds):
+Resolved case outcomes provide labels for approver/owner-triggered retraining of the fraud engines. The retraining flow writes runtime artifacts separately from the committed models and reports a new model version.
 
-| | Nigraan | Rules-only baseline |
-|---|---|---|
-| Fraud caught (yellow or red) | **100%** | 22.7% |
-| Caught at red (blocked) | **95.5%** | 22.7% |
-| Precision at red | **95.5%** | 20.0% |
-| False-alarm rate | **3.6%** | 3.2% |
-| PR-AUC | **0.993** | 0.07 |
-| Rupees blocked | **Rs 53.5 lakh of Rs 54.3 lakh** | Rs 12.6 lakh |
+## Evaluation
 
-The rules-only baseline flags exact duplicate numbers and amounts over the approval limit.
+**All results below use synthetic data. They do not establish real-world fraud accuracy, customer savings or production readiness.**
 
-The stronger **expert-rules** comparator flags recent bank changes, new vendors, night entry, price increases, combined payee exposure and deterministic policy/relationship checks. On the same 638 held-out payments it catches **19/22 frauds (86.4%)**, with **23.9% false alarms**, compared with the firewall's **22/22 (100%)** and **3.6% false alarms**. These broad, predefined checks are not optimized to a matching false-alarm rate. This comparison does not establish superiority to all possible expert rule systems.
+The fraud models train on **October 2025–July 2026** (months 1–10), with out-of-time tuning folds. The held-out set covers **August–September 2026** (months 11–12): **638 payments, including 22 planted frauds and 616 legitimate payments**.
 
-**Invoice-age sensitivity.** Refitting only XGBoost and Isolation Forest without `days_since_invoice_date`, retaining the shipped duplicate/graph/rules engines and fixed fusion thresholds, catches **22/22 (100%)**, with **4.1% false alarms**. Production model files were not replaced. This is one small synthetic test, not proof of generalization.
+| Held-out result | Nigraan | Expert rules | Simple rules |
+| --- | --- | --- | --- |
+| Planted frauds flagged for review or blocking | **22/22 (100%)** | 19/22 (86.4%) | 5/22 (22.7%) |
+| Legitimate payments flagged | **22/616 (3.6%)** | 147/616 (23.9%) | 20/616 (3.2%) |
+| Precision among all alerts | **50.0%** | 11.4% | 20.0% |
 
-**Robustness.** Across 5 different synthetic companies (90 frauds): 100% caught, 97.8% at red, 2.4% false alarms. Every fraud type is above the 70% target.
+Nigraan blocked **21/22 planted frauds (95.5%)**. Precision among blocked lines was also **95.5%**. Flagging and blocking are different outcomes; an alert still requires investigation.
 
-**Late payments.** PR-AUC 0.91 vs 0.57 for the late-rate baseline (logistic regression 0.89). 99% of the riskiest 20% really were late.
+Simple rules check normalized duplicate numbers and the individual approval limit. Expert rules also check recent bank changes, new vendors, night entry, price changes, combined exposure and deterministic policy/relationship evidence. These broad expert checks were not tuned to match Nigraan’s false-alarm rate; the comparison does not establish superiority to every possible rules system.
 
-**Cash receipts.** The current conservative policy excludes unconfirmed overdue collections. Its four-week rolling synthetic backtest shows **15.2% lower weekly receipt error** than the matching due-date baseline (Rs 22.0 lakh vs Rs 25.9 lakh). The older next-week collection assumption produced 41% (Rs 35.4 lakh vs Rs 60.4 lakh); that older result does not evaluate the current policy. Neither result validates 13-week balances or reserve outcomes.
+Additional measurements:
 
-**Document reader.** 100% field accuracy on the 40 demo PDFs with the regex fallback. That fallback was written for these layouts, so this proves the pipeline only.
+- **Invoice-age sensitivity:** an offline refit without invoice age still flagged 22/22, with 4.1% false alarms. Other synthetic correlations may remain.
+- **Late-payment ranking:** held-out PR-AUC 0.91, versus 0.57 for the late-rate baseline. This measures ranking, not collection-date accuracy.
+- **Cash receipts:** the current conservative policy reduced four-week mean absolute weekly receipt error by **15.2%**, from about **PKR 25.9 lakh to PKR 22.0 lakh**, across five rolling origins. This does not validate 13-week balances or reserve outcomes. The older 41% result used a different collection policy.
+- **Document extraction:** the regex fallback achieved 100% field accuracy on the 40 demo PDFs it was designed for. This demonstrates the pipeline, not unseen-layout or Gemini accuracy.
 
-Full details, ablations and limitations: [docs/model_card.md](docs/model_card.md). Judgement calls: [docs/decisions.md](docs/decisions.md).
+Sources: [main metrics](models/metrics.json), [expert comparison and age study](models/review_eval.json), [cash-policy comparison](models/cash_review_metrics.json), [extraction evaluation](models/extraction_eval.json) and [model card](docs/model_card.md). Saved results describe their evaluated artifacts; they are not live performance estimates after retraining.
 
-## Impact (assumptions, stated)
+## Testing
 
-- **Time.** A weekly run of ~80 lines takes an accountant and approver about 2 hours to cross-check by hand (vendor history, bank letters, duplicates). Nigraan auto-clears most lines as green: about 95% of a normal week in the backtest, and 29 of 40 in the fraud-seeded demo week. Review then focuses on the rest, which we estimate saves 60-90 minutes a week. This is an assumption to validate in a pilot.
-- **Money.** In the held-out months, Nigraan would have blocked **Rs 53.5 lakh** of planted fraud at red, vs Rs 12.6 lakh for the simple rules comparator. Live blocked amounts and cash outcomes come from the API; protecting money and remaining above the reserve are separate questions.
-- **SDGs.**
-  - **8.3**: helps micro and small enterprises formalise and grow, with digital financial controls they can afford.
-  - **8.10**: strengthens the capacity of domestic financial institutions and SMEs to use financial services safely.
-  - **16.4**: reduces illicit financial flows, here internal fraud and payment diversion.
-
-## Data
-
-100% synthetic, from `python -m data_gen.generate_company --seed 42`: a fictional company, fictional people and fictional vendors. CNICs and IBANs are stored only as salted SHA-256 hashes plus the last 4 digits. Money is integer paisa. Timestamps are stored in UTC and displayed in Asia/Karachi.
-
-## Run locally
+Backend tests, from `backend/` with its virtual environment active:
 
 ```bash
-# backend (Python 3.11)
-cd backend
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements-dev.txt
-uvicorn app.main:app --port 8000          # seeds the company on first start (~5 s)
-pytest -q                                  # TEST_DATABASE_URL=postgresql://... for Postgres
-
-# frontend (Node 22)
-cd ../frontend
-npm install
-echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
-npm run dev                                # http://localhost:3000
-npx playwright test                        # happy-path e2e (starts both servers if needed)
+python -m pytest -q
 ```
 
-Rebuild the data, models and metrics:
+Frontend checks, from `frontend/`:
 
 ```bash
-cd backend
-python -m data_gen.generate_company --seed 42   # DB + hidden labels in data_out/
-python -m data_gen.render_pdfs --seed 42        # demo_week/ PDFs, CSV, ground truth
-python -m ml.train_all --seed 42                # models/
-python -m ml.eval_extraction                    # models/extraction_eval.json
+npm run typecheck
+npm run lint
+npm run build
+```
+
+For browser tests, start in the repository root. Activate the backend environment so Playwright’s API command can find the installed Python dependencies:
+
+```bash
+source backend/.venv/bin/activate
+cd frontend
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Playwright starts the API and built Next.js app, or reuses servers already on ports 8000/3000. The suite covers login, reset/load, evidence, verification, approvals, upload, vendor workflows, cash scenarios, dashboard and navigation. **It resets and changes the connected demo data**, so use disposable local state rather than an active presentation session.
+
+Backend tests use temporary SQLite by default. `TEST_DATABASE_URL` selects PostgreSQL; the test reset replaces that database’s application tables, so use a dedicated test database. An existing Chromium installation can be selected with `PW_CHROMIUM`.
+
+[GitHub Actions](.github/workflows/ci.yml) runs backend tests and frontend typecheck, lint and build. Browser tests are currently separate. See the [dated implementation and validation report](docs/review-implementation.md) for recorded results.
+
+## Configuration
+
+Backend settings read the root `.env`, then `backend/.env`; process environment variables take precedence. Frontend settings belong in `frontend/.env.local` or the deployment platform. [.env.example](.env.example) lists common settings; replace its example secrets before a nonlocal deployment.
+
+| Variable | Default or purpose |
+| --- | --- |
+| `DATABASE_URL` | SQLite in `backend/nigraan.db`; PostgreSQL is supported. |
+| `JWT_SECRET` | Development-only default; use a generated secret for deployment. Render’s blueprint generates one. |
+| `DEMO_MODE` | `true`; enables demo reset/load controls. |
+| `AUTO_SEED` | `true`; seeds an empty database at startup. |
+| `ALLOWED_ORIGIN` | `http://localhost:3000`; accepts comma-separated frontend origins. |
+| `GEMINI_API_KEY` | Optional; enables Gemini extraction and summaries. |
+| `GEMINI_MODEL` | `gemini-2.5-flash`. |
+| `AI_TIMEOUT_S` | `8`; Gemini timeout per attempt. |
+| `SEED` | `42`; seed used when resetting or automatically seeding the synthetic company. |
+| `HASH_SALT` | Process environment only; defaults to `nigraan-demo-salt` for the stock demo. |
+| `NEXT_PUBLIC_API_URL` | Frontend API origin; defaults to `http://localhost:8000`. Do not append `/api/v1`. |
+
+`HASH_SALT` is read directly from the process environment, not the settings `.env` files. Leave its stock default for the included demo; a custom value must be supplied consistently when generating and using matching data/artifacts. Do not copy the example `change-me` value as a deployment secret.
+
+`DEMO_MODE=false` hides/disables demo reset/load; it does **not** remove seeded public accounts or disable automatic seeding. A real-data deployment requires separate provisioning and security work.
+
+## Deployment
+
+**API on Render:** import [render.yaml](render.yaml) as a Blueprint. It creates the Docker API and PostgreSQL database. Set `ALLOWED_ORIGIN` to the actual frontend origin; the value in the blueprint must be checked. Gemini is optional. Confirm `/health` and `/docs` after startup.
+
+**Frontend on Vercel:** import the repository with **Root Directory `frontend`**. Set `NEXT_PUBLIC_API_URL` to the deployed API origin before building. Redeploy after changing that value, then verify login and the full demo flow against the deployed API.
+
+The API Docker image intentionally runs one worker: model/cache and retraining job state live in the process. Public hosting requires persistent database storage and an instance ready before the presentation. Deployment configuration alone does not verify the hosted application.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| “Cannot reach the Nigraan API” | Request `/health`, check API logs and `NEXT_PUBLIC_API_URL`. For a different frontend origin, check `ALLOWED_ORIGIN`. |
+| Demo week is already open | Preserve any work you need, then reset as the owner before loading again. |
+| Approval is refused | Check role, review-line creator, case clearer and combined vendor amount. Switch to an eligible independent approver. |
+| Reserve falls below the limit | Inspect real projected outflows and excluded unconfirmed collections. A low-risk payment can still create a cash shortfall. |
+| Scanned PDF does not extract | Install Tesseract and Poppler, or use the Docker API. Check the displayed extraction engine and field confidence. |
+| Playwright cannot start | Build the frontend, activate backend Python and install Chromium. Check whether existing ports point to disposable demo servers. |
+| Saved study disappears after retraining | The study no longer matches the runtime artifacts. Reset to reload the shipped model for that demonstration. |
+
+## Data and current limits
+
+The included company, people, vendors, invoices and fraud labels are synthetic. Financial calculations use **integer paisa**, with rupee/lakh formatting at the interface. Timestamps are stored in UTC and displayed in **Asia/Karachi**.
+
+Application database identity fields use salted CNIC/IBAN hashes and account suffixes. Synthetic source documents and fixtures can contain full fictional identifiers. This is not a claim that real uploads are anonymized or that the prototype meets a production security standard.
+
+Unconfirmed overdue collections without a supported future date are excluded from base cash. A What-if scenario can explicitly date them as an assumption; it does not edit the ledger or guarantee the reserve.
+
+The MVP has role permissions, independent approval checks and an inspectable audit history. It has no bank settlement integration or tamper-proof audit store. Real customer validation, security hardening, data governance and forecast validation remain next steps.
+
+The proposed first pilot is a distributor’s weekly payment process, measured by review time, useful alerts and receipt forecast error. Customer savings, pricing and adoption are unvalidated. Stronger SME controls could support SDG 8.3 and 16.4; this is intended impact, not a measured outcome.
+
+## Documentation
+
+| Resource | Purpose |
+| --- | --- |
+| [Architecture](docs/architecture.md) | Services, data flow and API design. |
+| [Model card](docs/model_card.md) | Training, evaluation, features, ablations and limitations. |
+| [Design decisions](docs/decisions.md) | Implementation choices and tradeoffs. |
+| [Demo guide](docs/demo-guide.md) | Product demonstration, judging evidence and pilot hypotheses. |
+| [Review and validation](docs/review-implementation.md) | Dated changes, measured results, checks and remaining gaps. |
+| [Frontend guide](frontend/README.md) | Routes and display preferences. |
+
+```text
+backend/       FastAPI app, synthetic data generation, ML training/evaluation, tests
+frontend/      Next.js 16, React, TypeScript, Tailwind, Radix, charts and Playwright
+models/        Committed model artifacts and evaluation reports
+demo_week/     Demo invoices, ERP CSV, sample uploads and synthetic ground truth
+docs/          Architecture, model card, decisions and demonstration guides
+.github/       Continuous integration workflow
+```
+
+<details>
+<summary><strong>Advanced: regenerate synthetic data, models and reports</strong></summary>
+
+These steps are optional and separate from the quick start. Run from `backend/` with its virtual environment active:
+
+```bash
+python -m data_gen.generate_company --seed 42 --no-db
+python -m data_gen.render_pdfs --seed 42
+python -m ml.train_all --seed 42
+python -m ml.eval_extraction
 python -m ml.evaluate --months 11-12 --seeds 42,43,44,45,46
-python -m ml.review_evaluate               # additive expert/age study; shipped models unchanged
-python -m ml.cash_review                   # additive 4-week receipt-policy comparison
+python -m ml.review_evaluate
+python -m ml.cash_review
 ```
 
-## Deploy
+`--no-db` writes hidden evaluation data without replacing the database. Omitting it drops/recreates the configured database’s application tables. PDF generation replaces demo assets; training replaces committed model artifacts by default; evaluation updates reports, caches and plots. Inspect the diff before committing generated files. The review study refits comparison models in memory without replacing the shipped engines.
 
-For a five-minute presentation and release checks, use [the demo guide](docs/demo-guide.md). Public deployment/video links above still need verified URLs; the repository does not imply a deployed app or customer pilot.
+</details>
 
-Bank export is a **demo CSV**, containing only account last four digits. It neither sends money nor confirms settlement. Exported payments remain outstanding in the cash forecast; historical `released` payments represent seeded settlements. There is no bank settlement integration.
+## Contributing and team
 
-Local scanned-PDF extraction needs **Tesseract** and **Poppler (`pdftoppm`)**, included in the API Docker image. The fallback processes at most 10 pages with bounded render/OCR time. Gemini remains optional; template summaries are explicitly labelled when it is unavailable.
+Use a focused branch, explain the problem and resulting behavior, and run checks appropriate to the change. Preserve exact money calculations, approval separation and the distinction between evidence, model scores and generated explanations. Follow [frontend/AGENTS.md](frontend/AGENTS.md) when changing Next.js code, including its requirement to read the installed version’s local documentation.
 
-**API on Render.**
-1. New → Blueprint → select this repo. `render.yaml` creates `nigraan-api` (Docker, `backend/Dockerfile`) and a Postgres database.
-2. Set `ALLOWED_ORIGIN` to your Vercel URL. Optionally set `GEMINI_API_KEY`.
-3. The first boot seeds the company. Use a paid instance (starter) so the service does not sleep before the judging deadline.
+- **Mutahar:** integration, frontend and deployment.
+- **Uswa:** data, ML, evaluation and presentation.
 
-**Frontend on Vercel.**
-1. New Project → import this repo → **Root Directory `frontend`**.
-2. Set the env var `NEXT_PUBLIC_API_URL=https://<your-render-api>.onrender.com`.
-3. Deploy.
-
-Environment variables are listed in [.env.example](.env.example): `DATABASE_URL`, `GEMINI_API_KEY`, `JWT_SECRET`, `DEMO_MODE`, `ALLOWED_ORIGIN`, `NEXT_PUBLIC_API_URL`.
-
-## Repository
-
-```
-backend/   FastAPI app (app/), synthetic data generator (data_gen/), training & evaluation (ml/), tests/
-frontend/  Next.js 16 + Tailwind + Radix/shadcn-style UI, Recharts, react-force-graph, Playwright e2e
-models/    trained artifacts + metrics.json (committed, small)
-demo_week/ 40 invoice PDFs, ERP CSV, extraction ground truth, upload samples
-docs/      model card, architecture, decisions, evaluation plots
-```
-
-## Team & disclosure
-
-- **Mutahar**: integration, frontend, deploy.
-- **Uswa**: data, ML, evaluation, deck.
-
-Agent tooling/config prepared before the event; all application code written during AICON'26.
+The repository currently has no `LICENSE` file.
