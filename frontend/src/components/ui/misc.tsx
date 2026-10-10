@@ -14,7 +14,7 @@ export function Empty({ icon, title, children }: { icon?: React.ReactNode; title
     <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card px-6 py-16 text-center">
       {icon && <div className="text-muted-foreground [&_svg]:size-8">{icon}</div>}
       <div className="text-sm font-semibold">{title}</div>
-      {children && <div className="max-w-md text-sm text-muted-foreground">{children}</div>}
+      {children && <div className="max-w-md text-sm leading-relaxed text-muted-foreground">{children}</div>}
     </div>
   );
 }
@@ -24,7 +24,7 @@ export function Stat({ label, value, sub, tone }: { label: string; value: React.
   return (
     <div className="flex flex-col gap-1">
       <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className={cn("tabular text-2xl font-semibold tracking-tight", color)}>{value}</div>
+      <div className={cn("tabular text-[clamp(1.25rem,2vw,1.875rem)] font-semibold tracking-tight", color)}>{value}</div>
       {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
     </div>
   );

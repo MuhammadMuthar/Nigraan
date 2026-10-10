@@ -64,8 +64,17 @@ export default function CasePage() {
   return (
     <>
       <Link href={c.run_id ? "/run" : "/cases"} className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />Back</Link>
-      <Card>
-        <div className="flex flex-wrap items-center gap-6 p-5">
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-6 py-3 text-xs">
+          <span className="font-semibold uppercase tracking-wider text-muted-foreground">Investigation / Case #{c.id}</span>
+          <span className="text-muted-foreground">Synthetic company · evidence-led review</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-6 p-6">
+          <div className="border-r border-border pr-6">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">{c.payment.status === "blocked" ? "Amount blocked" : "Payment amount"}</div>
+            <div className="tabular text-2xl font-semibold tracking-tight">{rs(c.amount)}</div>
+            <div className="mt-2 text-xs capitalize text-muted-foreground">{c.payment.status.replaceAll("_", " ")}</div>
+          </div>
           {s && <ScoreGauge score={s.score} decision={s.decision} />}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -98,13 +107,13 @@ export default function CasePage() {
       {!s ? (
         <Card className="mt-5"><CardContent className="pt-5 text-sm text-muted-foreground">This case was found in the internal audit before Nigraan was installed. It is used as a training label; no score was recorded at the time.</CardContent></Card>
       ) : (
-        <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_420px]">
-          <div className="grid content-start gap-5">
+        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_350px]">
+          <div className="grid min-w-0 content-start gap-5">
             <Card>
               <CardHeader><CardTitle>Why Nigraan stopped this payment</CardTitle><CardDescription>Plain-English reasons from each engine, strongest evidence first</CardDescription></CardHeader>
-              <CardContent className="grid gap-2">
+              <CardContent className="grid gap-3">
                 {s.reasons.filter((r) => r.engine !== "info").map((r, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
+                  <div key={i} className={cn("flex flex-wrap items-start gap-2 rounded-lg p-3 text-sm leading-relaxed", i === 0 ? "border border-border bg-muted/50 font-medium" : "bg-muted/20")}>
                     <Badge variant={r.engine === "rules" ? "blocked" : "accent"} className="mt-0.5 shrink-0">{ENGINE_LABEL[r.engine] ?? r.engine}</Badge>
                     <span>{r.text}</span>
                   </div>
@@ -113,8 +122,13 @@ export default function CasePage() {
               </CardContent>
             </Card>
 
+            <Card className="border-accent/25">
+              <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="size-4 text-accent" />Suggested verification</CardTitle><CardDescription>Complete this check before recording a case outcome.</CardDescription></CardHeader>
+              <CardContent className="text-sm leading-relaxed">{c.verification}</CardContent>
+            </Card>
+
             <Card>
-              <CardHeader><CardTitle>Evidence</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Evidence</CardTitle><CardDescription>Source records and model signals. Check the invoice, bank timeline and relationship paths.</CardDescription></CardHeader>
               <CardContent>
                 <Tabs defaultValue={defaultTab(ev!)}>
                   <TabsList>
@@ -138,7 +152,7 @@ export default function CasePage() {
 
             <Card>
               <CardHeader><CardTitle>How the score was built</CardTitle><CardDescription>score = 100 × max(rule, Σ weight × engine signal), bands at 40 and 75</CardDescription></CardHeader>
-              <CardContent className="grid gap-6 md:grid-cols-2">
+              <CardContent className="grid gap-6 2xl:grid-cols-2">
                 <EngineBars contributions={s.engines.contributions} signals={s.engines.signals} />
                 <div>
                   <div className="mb-2 text-sm font-semibold">Risk model drivers (SHAP, log-odds)</div>
@@ -149,10 +163,10 @@ export default function CasePage() {
           </div>
 
           <div className="grid content-start gap-5">
-            <SummaryCard caseId={c.id} verification={c.verification} />
+            <SummaryCard caseId={c.id} />
             <Card><CardContent className="pt-5"><AgentTrace steps={s.trace} /></CardContent></Card>
             <Card>
-              <CardHeader><CardTitle>Case log</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Case outcome & audit log</CardTitle></CardHeader>
               <CardContent className="grid gap-2 text-xs">
                 {c.events.filter((e) => e.kind !== "viewed").map((e, i) => (
                   <div key={i} className="flex justify-between gap-2"><span><b className="capitalize">{e.kind.replace("_", " ")}</b>{e.user ? ` by ${e.user}` : " by Nigraan"}{typeof e.detail?.note === "string" && e.detail.note ? `: "${e.detail.note}"` : ""}</span><span className="shrink-0 text-muted-foreground">{dateTime(e.at)}</span></div>
@@ -254,7 +268,7 @@ function InvoiceView({ c }: { c: CaseDetail }) {
   );
 }
 
-function SummaryCard({ caseId, verification }: { caseId: number; verification: string }) {
+function SummaryCard({ caseId }: { caseId: number }) {
   const [lang, setLang] = useState<"en" | "ur">("en");
   const key = `${caseId}-${lang}`;
   const [res, setRes] = useState<{ key: string; s: Summary } | null>(null);
@@ -272,19 +286,20 @@ function SummaryCard({ caseId, verification }: { caseId: number; verification: s
           <CardTitle className="flex items-center gap-1.5"><Sparkles className="size-4 text-accent" />Case summary</CardTitle>
           <Button size="sm" variant="ghost" onClick={() => setLang(lang === "en" ? "ur" : "en")}><Languages />{lang === "en" ? "Roman Urdu" : "English"}</Button>
         </div>
-        <CardDescription>Written only from the structured evidence; every number is checked against it.</CardDescription>
+        <CardDescription>Explanation only; this summary does not determine the risk score. Numbers are checked against structured evidence.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">
-        {!s ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Writing…</div> : (
+        {!s ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading explanation…</div> : (
           <>
             <Badge variant="outline" className="w-fit">{modeLabel[s.mode] ?? s.mode}</Badge>
             {s.text ? <p className="whitespace-pre-line text-sm leading-relaxed">{s.text}</p> : s.evidence && (
               <ul className="list-disc pl-4 text-sm">{((s.evidence.reasons as string[]) ?? []).map((r, i) => <li key={i}>{r}</li>)}</ul>
             )}
+            {s.mode === "error" && <p role="alert" className="text-sm text-muted-foreground">The explanation is unavailable. Use the evidence and verification step to investigate.</p>}
             {s.guardrail && <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><ShieldCheck className="size-3.5" />{s.guardrail}</div>}
           </>
         )}
-        <div className="rounded-md border border-accent/30 bg-accent-soft/60 px-3 py-2 text-sm"><div className="text-[11px] font-semibold uppercase tracking-wide text-accent">Suggested verification</div>{verification}</div>
+
       </CardContent>
     </Card>
   );
@@ -313,7 +328,7 @@ function ResolveDialog({ caseId, outcome, onClose, onDone }: { caseId: number; o
         <DialogDescription>
           {outcome === "confirmed_fraud" ? "The payment will be rejected. The model's score stays on record." : "The red verdict stays on record; an override sends the line to a second approver."}
         </DialogDescription>
-        <Textarea className="mt-4" placeholder="What did you verify? (required for the audit trail)" value={note} onChange={(e) => setNote(e.target.value)} />
+        <Textarea aria-label="Verification note" className="mt-4" placeholder="What did you verify? (required for the audit trail)" value={note} onChange={(e) => setNote(e.target.value)} />
         {outcome === "confirmed_fraud" && (
           <label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={block} onChange={(e) => setBlock(e.target.checked)} />Block this vendor</label>
         )}

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from "recharts";
+import { Area, ComposedChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from "recharts";
 import { ArrowRight, CircleCheck, Hourglass, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import type { CashPanel as Panel, RunDetail } from "@/lib/types";
 function Outcome({ title, sub, c, reserve, good }: { title: string; sub: string; c: Panel["with_nigraan"]; reserve: number; good: boolean }) {
   const ok = c.stays_above_reserve;
   return (
-    <div className={cn("flex-1 rounded-lg border p-4", ok ? "border-allow/30 bg-allow-soft/60" : "border-blocked/30 bg-blocked-soft/60")}>
+    <div className={cn("flex-1 rounded-lg border p-4", ok ? "border-border bg-card" : "border-blocked/20 bg-blocked-soft/30")}>
       <div className="flex items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-1.5 text-sm font-semibold">{good && <ShieldCheck className="size-4 text-accent" />}{title}</div>
@@ -19,7 +19,7 @@ function Outcome({ title, sub, c, reserve, good }: { title: string; sub: string;
         </div>
         {ok ? <Badge variant="allow"><CircleCheck className="size-3.5" />Above reserve</Badge> : <Badge variant="blocked"><TriangleAlert className="size-3.5" />Breach</Badge>}
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <div className="text-[11px] text-muted-foreground">Cash low point (13 weeks)</div>
           <div className={cn("tabular text-xl font-semibold", ok ? "text-foreground" : "text-blocked")}>{rs(c.low_point)}</div>
@@ -57,7 +57,7 @@ export function CashPanel({ run }: { run: RunDetail }) {
         </div>
         <div className="text-xs text-muted-foreground">Reserve <span className="tabular font-semibold text-foreground">{rs(c.reserve)}</span></div>
       </div>
-      <div className="grid gap-5 p-5 xl:grid-cols-[260px_1fr_1fr]">
+      <div className="grid gap-5 p-5 xl:grid-cols-[210px_1fr_1.1fr]">
         <div className="grid content-start gap-3">
           <div>
             <div className="text-xs text-muted-foreground">Cash in bank before the run</div>
@@ -83,10 +83,10 @@ export function CashPanel({ run }: { run: RunDetail }) {
           <Outcome title="With Nigraan" sub="Red lines blocked, green + yellow released" c={c.with_nigraan} reserve={c.reserve} good />
           <Outcome title="If every line were released" sub="No fraud firewall" c={c.release_everything} reserve={c.reserve} good={false} />
         </div>
-        <div className="min-h-[220px]">
+        <div className="min-h-[220px] rounded-xl bg-muted/35 p-3">
           <div className="mb-1 text-xs font-medium text-muted-foreground">Daily cash, next 4 weeks</div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <ComposedChart data={chart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={6} tickLine={false} axisLine={false} />
               <YAxis tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} width={54} tickLine={false} axisLine={false} />
@@ -94,13 +94,14 @@ export function CashPanel({ run }: { run: RunDetail }) {
               <ReferenceLine y={c.reserve / 100} stroke="var(--blocked)" strokeDasharray="4 4" label={{ value: "Reserve", position: "insideTopRight", fontSize: 10, fill: "var(--blocked)" }} />
               <Area type="stepAfter" dataKey="with_nigraan" stroke="var(--accent)" fill="var(--accent-soft)" strokeWidth={2} />
               <Line type="stepAfter" dataKey="release_everything" stroke="var(--blocked)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
-            </AreaChart>
+            </ComposedChart>
           </ResponsiveContainer>
+          <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground"><span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-accent" />With Nigraan</span><span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-blocked" />Release everything</span><span>Amounts in Rs · daily projection</span></div>
         </div>
       </div>
       {c.responsible_receivables.length > 0 && (
         <div className="border-t border-border bg-muted/40 px-5 py-3">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold"><Hourglass className="size-3.5 text-review" />Receivables most responsible for the low point (due before it, expected after it)</div>
             <Link href="/cash" className="flex items-center gap-1 text-xs font-medium text-accent hover:underline">Cash outlook<ArrowRight className="size-3" /></Link>
           </div>

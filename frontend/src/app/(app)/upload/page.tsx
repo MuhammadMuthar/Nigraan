@@ -78,25 +78,28 @@ export default function UploadPage() {
   return (
     <>
       <PageTitle title="Upload invoices" sub="The document reader extracts fields into a strict schema; deterministic checks set the confidence. The LLM never decides." />
+      <section aria-label="Document workflow" className="mb-5 grid gap-3 sm:grid-cols-3">
+        {[{ step: "01", title: "Read the document", text: "PDF text, OCR or Gemini extracts invoice fields." }, { step: "02", title: "Verify the fields", text: "Review confidence and deterministic validation checks." }, { step: "03", title: "Score the payment", text: "Risk engines decide; the document reader never sets a score." }].map((step) => <Card key={step.step} className="flex gap-3 p-4"><span className="text-xs font-semibold text-accent">{step.step}</span><div><h2 className="text-sm font-semibold">{step.title}</h2><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p></div></Card>)}
+      </section>
       <div
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); Array.from(e.dataTransfer.files).forEach(handle); }}
-        onClick={() => input.current?.click()}
-        className={cn("flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed bg-card px-6 py-10 text-center transition-colors",
+        className={cn("flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed bg-card px-6 py-10 text-center transition-colors",
           drag ? "border-accent bg-accent-soft" : "border-border hover:border-accent/50")}
       >
-        <FileUp className="size-8 text-accent" />
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-accent-soft"><FileUp aria-hidden className="size-6 text-accent" /></div>
         <div className="text-sm font-semibold">Drop invoice PDFs or images here</div>
-        <div className="text-xs text-muted-foreground">or click to choose · PDF, PNG, JPG up to 8 MB</div>
-        <input ref={input} type="file" accept=".pdf,image/*" multiple hidden onChange={(e) => Array.from(e.target.files ?? []).forEach(handle)} />
+        <div className="text-xs text-muted-foreground">PDF, PNG, JPG · up to 8 MB per file</div>
+        <Button variant="outline" onClick={() => input.current?.click()}><FileUp />Choose invoice files</Button>
+        <input aria-label="Invoice files" ref={input} type="file" accept=".pdf,image/*" multiple hidden onChange={(e) => Array.from(e.target.files ?? []).forEach(handle)} />
       </div>
       {samples && samples.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">No files handy? Try a sample:</span>
+        <div className="mt-5 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/30 p-4 text-xs">
+          <span className="text-muted-foreground">Demo samples:</span>
           {samples.map((s) => (
-            <Button key={s.group + s.name} size="sm" variant="outline" onClick={() => loadSample(s)} title={s.name}>
-              <FileText />{s.hint}: {s.name.replace(/^resent_|^new_/, "").slice(0, 26)}
+            <Button key={s.group + s.name} size="sm" variant="outline" className="max-w-full" onClick={() => loadSample(s)} title={`${s.hint}: ${s.name}`}>
+              <FileText /><span className="min-w-0 truncate">{s.hint}: {s.name.replace(/^resent_|^new_/, "").slice(0, 26)}</span>
             </Button>
           ))}
         </div>
@@ -141,10 +144,11 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
         {it.score && <DecisionBadge decision={it.score.decision} large />}
         {it.score && <span className="tabular text-sm font-semibold">{it.score.score}/100</span>}
       </div>
-      {it.state === "error" && <div className="flex items-center gap-2 px-4 py-3 text-sm text-blocked"><CircleAlert className="size-4" />{it.error}</div>}
+      {it.state === "error" && <div role="alert" className="flex items-center gap-2 px-4 py-3 text-sm text-blocked"><CircleAlert className="size-4" />{it.error}</div>}
       {ext && (
         <div className="grid gap-5 p-4 lg:grid-cols-[1.2fr_1fr]">
-          <div>
+          <div className="min-w-0">
+            <div className="mb-3 flex justify-between text-xs font-semibold"><span>Extracted fields</span><span className="text-muted-foreground">Confidence</span></div>
             <div className="grid gap-1">
               {Object.keys(FIELD_LABEL).map((f, i) => {
                 const v = ext.fields[f];
@@ -152,10 +156,10 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
                 const low = c < 0.8;
                 const editable = low && ext.status === "draft" && ["invoice_no", "invoice_date", "due_date", "subtotal", "tax", "total"].includes(f);
                 return (
-                  <div key={f} className={cn("fill-in grid grid-cols-[110px_1fr_70px] items-center gap-2 rounded px-2 py-1 text-sm", low && "bg-review-soft")} style={{ animationDelay: `${i * 60}ms` }}>
+                  <div key={f} className={cn("fill-in grid grid-cols-[90px_minmax(0,1fr)_65px] sm:grid-cols-[110px_minmax(0,1fr)_70px] items-center gap-2 rounded-lg px-2 py-2 text-sm", low && "bg-review-soft")} style={{ animationDelay: `${i * 60}ms` }}>
                     <div className="text-xs text-muted-foreground">{FIELD_LABEL[f]}</div>
                     {editable ? (
-                      <Input className="h-7 text-sm" defaultValue={v == null ? "" : String(v)} onChange={(e) => setEdits((x) => ({ ...x, [f]: e.target.value }))} />
+                      <Input aria-label={`Correct ${FIELD_LABEL[f]}`} className="h-8 text-sm" defaultValue={v == null ? "" : String(v)} onChange={(e) => setEdits((x) => ({ ...x, [f]: e.target.value }))} />
                     ) : (
                       <div className={cn("truncate font-mono text-[13px]", v == null && "text-muted-foreground")}>{v == null ? "not found" : typeof v === "number" ? v.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : String(v)}</div>
                     )}
@@ -196,7 +200,7 @@ function UploadCard({ it, onRescore, onUpdate }: { it: Item; onRescore: (key: st
             {it.score && (
               <div className={cn("rounded-md border p-3", it.score.decision === "blocked" ? "border-blocked/30 bg-blocked-soft/60" : it.score.decision === "review" ? "border-review/30 bg-review-soft/60" : "border-allow/30 bg-allow-soft/60")}>
                 <div className="text-sm font-medium">{it.score.reasons.find((r) => r.engine !== "info" && !r.weak)?.text ?? "No significant risk signals"}</div>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {it.score.case_id && <Button asChild size="sm" variant="danger"><Link href={`/cases/${it.score.case_id}`}>Open case<ArrowRight /></Link></Button>}
                   <Button asChild size="sm" variant="outline"><Link href="/run">See it in the payment run</Link></Button>
                 </div>

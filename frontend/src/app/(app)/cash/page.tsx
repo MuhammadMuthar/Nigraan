@@ -70,15 +70,18 @@ export default function CashPage() {
   return (
     <>
       <PageTitle title="Cash outlook" sub={`13 weeks from ${dayFull(p.as_of)} · deterministic cash engine · receipts dated by each customer's payment history`} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-xs">
+        <span className="font-medium">Synthetic demo forecast · reserve checked daily</span><span className="text-muted-foreground">Facts, model estimates and assumptions are shown separately</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Card><CardContent className="pt-5"><Stat label="Cash today" value={rs(p.opening)} sub="bank balance (fact)" /></CardContent></Card>
         <Card><CardContent className="pt-5"><Stat label="Reserve" value={rs(p.reserve)} sub="minimum the owner wants to keep" /></CardContent></Card>
-        <Card><CardContent className="pt-5"><Stat label="Lowest point" value={rs(p.low_point)} sub={dayFull(p.low_point_day)} tone={p.first_breach ? "blocked" : "accent"} /></CardContent></Card>
+        <Card className="border-accent/25 bg-accent-soft/30"><CardContent className="pt-5"><Stat label="Lowest point" value={rs(p.low_point)} sub={dayFull(p.low_point_day)} tone={p.first_breach ? "blocked" : "accent"} /></CardContent></Card>
         <Card><CardContent className="pt-5"><Stat label="First reserve breach" value={p.first_breach ? day(p.first_breach, { weekday: "short" }) : "None"} sub={p.first_breach ? `short by ${rs(p.breach_gap)}` : "stays above reserve for 13 weeks"} tone={p.first_breach ? "blocked" : "allow"} /></CardContent></Card>
         <Card><CardContent className="pt-5"><Stat label="Next 13 weeks" value={<span className="text-base">+{rsShort(p.total_in)} / −{rsShort(p.total_out)}</span>} sub={`${p.beyond_horizon.length} receipt(s) beyond horizon`} /></CardContent></Card>
       </div>
 
-      <Card className="mt-5">
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>13-week cash projection</CardTitle>
           <CardDescription>Bars: weekly receipts (above) and payments (below), split into facts, model estimates and assumptions. Lines: week-end balance and the daily low inside each week. Click a week for the daily view.</CardDescription>
@@ -91,7 +94,7 @@ export default function CashPage() {
                   <rect width="6" height="6" fill="#e6f4f2" /><line x1="0" y1="0" x2="0" y2="6" stroke="#0f766e" strokeWidth="2" />
                 </pattern>
                 <pattern id="hatchOut" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                  <rect width="6" height="6" fill="#fdecec" /><line x1="0" y1="0" x2="0" y2="6" stroke="#b91c1c" strokeWidth="2" />
+                  <rect width="6" height="6" fill="#e2e8f0" /><line x1="0" y1="0" x2="0" y2="6" stroke="#64748b" strokeWidth="2" />
                 </pattern>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -99,7 +102,7 @@ export default function CashPage() {
               <YAxis tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} width={60} tickLine={false} axisLine={false} />
               <RTooltip formatter={(v, n) => [rs(Math.abs(Number(v)) * 100), LEG[String(n)] ?? n]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Legend formatter={(v) => <span className="text-xs">{LEG[v] ?? v}</span>} />
-              <ReferenceLine y={k(p.reserve)} stroke="var(--blocked)" strokeDasharray="5 4" label={{ value: "Reserve", fontSize: 10, fill: "var(--blocked)", position: "insideTopLeft" }} />
+              <ReferenceLine y={k(p.reserve)} stroke="#64748b" strokeDasharray="5 4" label={{ value: "Reserve", fontSize: 10, fill: "#58677b", position: "insideTopLeft" }} />
               <ReferenceLine y={0} stroke="#a1a1aa" />
               <Bar dataKey="in_fact" stackId="in" fill="#0f766e" />
               <Bar dataKey="in_estimate" stackId="in" fill="#5eb3aa" />
@@ -107,7 +110,7 @@ export default function CashPage() {
               <Bar dataKey="out_fact" stackId="out" fill="#d4d4d8" />
               <Bar dataKey="out_assumption" stackId="out" fill="url(#hatchOut)" />
               <Line dataKey="closing" stroke="#18181b" strokeWidth={2} dot={{ r: 2.5 }} />
-              <Line dataKey="low" stroke="var(--review)" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+              <Line dataKey="low" stroke="#64748b" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
@@ -126,7 +129,7 @@ export default function CashPage() {
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} width={56} tickLine={false} axisLine={false} />
                 <RTooltip formatter={(v, n) => [rs(Math.abs(Number(v)) * 100), String(n)]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                <ReferenceLine y={k(p.reserve)} stroke="var(--blocked)" strokeDasharray="5 4" />
+                <ReferenceLine y={k(p.reserve)} stroke="#64748b" strokeDasharray="5 4" />
                 <Bar dataKey="inflow" fill="#5eb3aa" />
                 <Bar dataKey="outflow" fill="#d4d4d8" />
                 <Line dataKey="closing" stroke="#18181b" strokeWidth={2} dot={{ r: 3 }} />
@@ -134,7 +137,7 @@ export default function CashPage() {
             </ResponsiveContainer>
             <div className="mt-3 flex flex-wrap gap-1">
               {p.weeks.map((w) => (
-                <button key={w.week} onClick={() => setWeek(w.week)} className={cn("rounded px-2 py-0.5 text-[11px]", w.week === focusWeek ? "bg-accent text-white" : w.low < p.reserve ? "bg-blocked-soft text-blocked" : "bg-muted text-muted-foreground")}>W{w.week}</button>
+                <button key={w.week} onClick={() => setWeek(w.week)} aria-pressed={w.week === focusWeek} aria-label={`Week ${w.week}${w.low < p.reserve ? ", below reserve" : ", above reserve"}`} className={cn("rounded-md px-2.5 py-2 text-xs", w.week === focusWeek ? "bg-accent text-white" : w.low < p.reserve ? "bg-blocked-soft text-blocked" : "bg-muted text-muted-foreground")}>W{w.week}</button>
               ))}
             </div>
           </CardContent>
@@ -142,7 +145,7 @@ export default function CashPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>What if…</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2"><CardTitle>What if…</CardTitle><Badge variant="outline">Scenario · no changes to the books</Badge></div>
             <CardDescription>Move a collection to a promised date, or hold the yellow lines of this run. Scenarios never change the books.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -152,11 +155,11 @@ export default function CashPage() {
                 <CalendarClock className="size-4 text-accent" />
                 <span className="font-medium">{m.customer}</span><span className="tabular text-muted-foreground">{rs(m.amount)}</span>
                 <span className="text-xs text-muted-foreground">expected {day(m.from)} →</span>
-                <Input type="date" className="h-8 w-40" value={m.new_date} min={p.as_of} onChange={(e) => setMoves((xs) => xs.map((x, j) => (j === i ? { ...x, new_date: e.target.value } : x)))} />
-                <Button size="icon" variant="ghost" className="ml-auto size-7" onClick={() => setMoves((xs) => xs.filter((_, j) => j !== i))} aria-label="Remove"><X /></Button>
+                <Input aria-label={`New collection date for ${m.customer}`} type="date" className="h-8 w-40" value={m.new_date} min={p.as_of} disabled={busy} onChange={(e) => { setMoves((xs) => xs.map((x, j) => (j === i ? { ...x, new_date: e.target.value } : x))); setScen(null); }} />
+                <Button size="icon" variant="ghost" className="ml-auto size-7" disabled={busy} onClick={() => { setMoves((xs) => xs.filter((_, j) => j !== i)); setScen(null); }} aria-label="Remove"><X /></Button>
               </div>
             ))}
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={holdYellow} onChange={(e) => setHoldYellow(e.target.checked)} disabled={!data.run_id} />Hold the yellow lines of this week&apos;s run</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={holdYellow} onChange={(e) => { setHoldYellow(e.target.checked); setScen(null); }} disabled={busy || !data.run_id} />Hold the yellow lines of this week&apos;s run</label>
             <Button className="w-fit" onClick={runScenario} disabled={busy || (moves.length === 0 && !holdYellow)}>{busy ? <Loader2 className="animate-spin" /> : <Play />}Run scenario</Button>
             {scen && (
               <div className="grid gap-3 rounded-md border border-border p-3">
@@ -172,7 +175,7 @@ export default function CashPage() {
                     <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
                     <YAxis tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} width={56} tickLine={false} axisLine={false} />
                     <RTooltip formatter={(v, n) => [rs(Number(v) * 100), n === "base" ? "Base (weekly low)" : "Scenario (weekly low)"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                    <ReferenceLine y={k(p.reserve)} stroke="var(--blocked)" strokeDasharray="5 4" />
+                    <ReferenceLine y={k(p.reserve)} stroke="#64748b" strokeDasharray="5 4" />
                     <Line dataKey="base" stroke="#a1a1aa" strokeWidth={2} dot={false} />
                     <Line dataKey="scenario" stroke="var(--accent)" strokeWidth={2} dot={false} />
                   </LineChart>
@@ -208,8 +211,8 @@ export default function CashPage() {
                 </TD>
                 <TD className="max-w-[300px] text-xs text-muted-foreground"><div className="line-clamp-2">{r.reasons.join(" · ") || "—"}</div></TD>
                 <TD className="text-right">
-                  <Button size="sm" variant="ghost" disabled={moves.some((m) => m.receivable_id === r.receivable_id)}
-                    onClick={() => setMoves((xs) => [...xs, { receivable_id: r.receivable_id!, customer: r.customer, amount: r.amount, from: r.expected_date!, new_date: nextWeekday(p.as_of, 3) }])}>Move</Button>
+                  <Button size="sm" variant="ghost" disabled={busy || moves.some((m) => m.receivable_id === r.receivable_id)}
+                    onClick={() => { setMoves((xs) => [...xs, { receivable_id: r.receivable_id!, customer: r.customer, amount: r.amount, from: r.expected_date!, new_date: nextWeekday(p.as_of, 3) }]); setScen(null); }}>Move</Button>
                 </TD>
               </TR>
             ))}
@@ -219,7 +222,7 @@ export default function CashPage() {
 
       <Card className="mt-5">
         <CardHeader><CardTitle>Assumptions</CardTitle></CardHeader>
-        <CardContent><ul className="grid gap-1 text-sm text-muted-foreground">{data.assumptions.map((a, i) => <li key={i} className="flex gap-2">{i === 0 ? <TriangleAlert className="mt-0.5 size-4 shrink-0 text-review" /> : <CircleCheck className="mt-0.5 size-4 shrink-0 text-allow" />}{a}</li>)}</ul></CardContent>
+        <CardContent><ul className="grid gap-1 text-sm text-muted-foreground">{data.assumptions.map((a, i) => <li key={i} className="flex gap-2">{i === 0 ? <TriangleAlert className="mt-0.5 size-4 shrink-0 text-review" /> : <CircleCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />}{a}</li>)}</ul></CardContent>
       </Card>
     </>
   );

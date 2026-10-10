@@ -39,30 +39,36 @@ export default function Dashboard() {
   return (
     <>
       <PageTitle title="Dashboard" sub={`${data.company.name} · as of ${day(data.company.as_of, { weekday: "short", year: "numeric" })} · model ${data.model_version}`} />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-xs">
+        <span className="flex items-center gap-2 font-medium"><ShieldAlert aria-hidden className="size-4 text-muted-foreground" />Synthetic demo · fictional company · no real-world performance claim</span>
+        <span className="text-muted-foreground">Reporting month: {day(data.company.as_of, { day: undefined, month: "long", year: "numeric" })}</span>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card><CardContent className="pt-5"><Stat label="Rupees protected this month" value={rs(data.rupees_protected_this_month)} sub="blocked by Nigraan or rejected as fraud" tone="accent" /></CardContent></Card>
-        <Card><CardContent className="pt-5"><Stat label="Open cases" value={data.open_cases.count} sub={`${rs(data.open_cases.amount)} on hold`} tone={data.open_cases.count ? "blocked" : undefined} />
+        <Card className="border-[#0B1422] bg-[#0B1422] text-white [&_.text-muted-foreground]:text-slate-300"><CardContent className="pt-5"><ShieldCheck aria-hidden className="mb-4 size-5 text-teal-300" /><Stat label="Rupees protected this month" value={rs(data.rupees_protected_this_month)} sub="blocked by Nigraan or rejected as fraud" /></CardContent></Card>
+        <Card><CardContent className="pt-5"><ShieldAlert aria-hidden className="mb-4 size-5 text-muted-foreground" /><Stat label="Open cases" value={data.open_cases.count} sub={`${rs(data.open_cases.amount)} on hold`} tone={data.open_cases.count ? "blocked" : undefined} />
           <Link href="/cases" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Review cases<ArrowRight className="size-3" /></Link></CardContent></Card>
-        <Card><CardContent className="pt-5">{data.cash ? <Stat label="Cash low point (13 weeks)" value={rs(data.cash.low_point)} sub={data.cash.first_breach ? `breaches reserve ${day(data.cash.first_breach)}` : `${day(data.cash.low_point_day)} · above the ${rs(data.cash.reserve)} reserve`} tone={data.cash.first_breach ? "blocked" : "allow"} /> : null}
+        <Card><CardContent className="pt-5"><Wallet aria-hidden className="mb-4 size-5 text-muted-foreground" />{data.cash ? <Stat label="Cash low point (13 weeks)" value={rs(data.cash.low_point)} sub={data.cash.first_breach ? `breaches reserve ${day(data.cash.first_breach)}` : `${day(data.cash.low_point_day)} · above the ${rs(data.cash.reserve)} reserve`} tone={data.cash.first_breach ? "blocked" : "allow"} /> : <Stat label="Cash low point (13 weeks)" value="—" sub="Cash projection unavailable" />}
+          <Link href="/cash" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Explore cash outlook<ArrowRight className="size-3" /></Link>
           {data.cash?.release_everything?.first_breach && <div className="mt-1 text-[11px] text-blocked">Without the firewall: breach on {day(data.cash.release_everything.first_breach, { weekday: "short" })}</div>}</CardContent></Card>
-        <Card><CardContent className="pt-5">{data.run ? <Stat label="This week's run" value={`${data.run.total} lines`} sub={<span><span className="text-allow">{data.run.by_decision.allow} allow</span> · <span className="text-review">{data.run.by_decision.review} review</span> · <span className="text-blocked">{data.run.by_decision.blocked} blocked</span> · {data.run.pending} awaiting</span>} /> : <Stat label="This week's run" value="—" sub="load the demo week" />}</CardContent></Card>
+        <Card><CardContent className="pt-5"><LayoutDashboard aria-hidden className="mb-4 size-5 text-muted-foreground" />{data.run ? <Stat label="This week's run" value={`${data.run.total} lines`} sub={<span><span className="text-allow">{data.run.by_decision.allow} allow</span> · <span className="text-review">{data.run.by_decision.review} review</span> · <span className="text-blocked">{data.run.by_decision.blocked} blocked</span> · {data.run.pending} awaiting</span>} /> : <Stat label="This week's run" value="—" sub="load the demo week" />}<Link href="/run" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Open payment run<ArrowRight className="size-3" /></Link></CardContent></Card>
       </div>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Alerts this month by fraud pattern</CardTitle><CardDescription>Yellow and red lines in live payment runs, by the engine&apos;s suspected pattern</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Alerts this month by fraud pattern</CardTitle><CardDescription>Review and blocked lines in this demo’s payment runs, by the engine&apos;s suspected pattern</CardDescription></CardHeader>
           <CardContent>
-            {alerts.length === 0 ? <div className="py-10 text-center text-sm text-muted-foreground">No live alerts yet.</div> : (
+            {alerts.length === 0 ? <div className="py-10 text-center text-sm text-muted-foreground">No alerts in the current demo yet. Load the demo week to see risk patterns.</div> : (
               <ResponsiveContainer width="100%" height={230}>
-                <BarChart data={alerts} layout="vertical" margin={{ left: 40, right: 16 }}>
+                <BarChart data={alerts} layout="vertical" margin={{ left: 0, right: 16, bottom: 12 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                  <XAxis type="number" tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} />
-                  <YAxis type="category" dataKey="label" width={150} tick={{ fontSize: 11 }} />
+                  <XAxis type="number" tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 11 }} label={{ value: "Amount (Rs)", position: "insideBottom", offset: -10, fontSize: 11 }} />
+                  <YAxis type="category" dataKey="label" width={130} tick={{ fontSize: 11 }} />
                   <RTooltip formatter={(v) => rs(Number(v) * 100)} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                   <Bar dataKey="amountR" name="Amount" fill="var(--blocked)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
+            {alerts.length > 0 && <div className="mt-3 grid gap-2 text-xs">{alerts.map((a) => <div key={a.type} className="flex flex-wrap justify-between gap-1 border-t border-border pt-2"><span className="font-medium">{a.label}</span><span className="text-muted-foreground">{a.count} alerts · {a.red} blocked · {rs(a.amount)}</span></div>)}</div>}
             <div className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
               Training history (internal audit, months 1-10): {data.historical_confirmed.map((h) => `${FRAUD_NAMES[h.type] ?? h.type} ${h.count}`).join(" · ")}
             </div>
@@ -72,6 +78,7 @@ export default function Dashboard() {
         {m ? (
           <Card>
             <CardHeader>
+              <Badge variant="outline" className="mb-2 w-fit">Offline ML evaluation · synthetic hold-out</Badge>
               <CardTitle className="flex items-center gap-1.5"><BadgeCheck className="size-4 text-accent" />Fraud firewall vs rules-only baseline</CardTitle>
               <CardDescription>Held-out test: {m.test_period}. {m.fraud.n_payments} payments, {m.fraud.n_fraud} planted frauds the models never saw.</CardDescription>
             </CardHeader>
@@ -84,7 +91,7 @@ export default function Dashboard() {
               </div>
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {Object.entries(m.fraud.per_type).map(([t, v]) => (
-                  <Badge key={t} variant={v.recall >= 0.7 ? "allow" : "review"}>{FRAUD_NAMES[t]} {v.caught}/{v.n}</Badge>
+                  <Badge key={t} variant="outline">{FRAUD_NAMES[t]} {v.caught}/{v.n}</Badge>
                 ))}
               </div>
               {m.robustness && (
@@ -122,7 +129,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-1.5"><Brain className="size-4 text-accent" />Document reader</CardTitle><CardDescription>Field accuracy on the 40 demo-week PDFs</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-1.5"><Brain className="size-4 text-accent" />Document reader</CardTitle><CardDescription>Field accuracy on the evaluated demo-week PDFs</CardDescription></CardHeader>
             <CardContent>
               {m.extraction ? (<><div className="tabular text-3xl font-semibold text-accent">{pct(m.extraction.field_accuracy, 1)}</div><div className="text-sm">of fields extracted exactly ({m.extraction.engine}, {m.extraction.files} files)</div></>) : <div className="text-sm text-muted-foreground">Run <span className="font-mono">python -m ml.eval_extraction</span></div>}
               <div className="mt-2 text-xs text-muted-foreground">The regex fallback was written for these three invoice layouts, so this proves the pipeline, not accuracy on unseen layouts (that is Gemini&apos;s job). Low-confidence fields are highlighted; the LLM never sets a score or a cash number.</div>

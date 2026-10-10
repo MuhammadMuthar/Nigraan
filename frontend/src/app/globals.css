@@ -2,7 +2,7 @@
 
 /* Nigraan design tokens: neutral palette, one accent (teal), semantic traffic lights. */
 @theme inline {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-background: var(--background);
@@ -23,21 +23,21 @@
   --color-blocked: var(--blocked);
   --color-blocked-soft: var(--blocked-soft);
 
-  --radius-lg: 0.75rem;
-  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
 }
 
 :root {
-  --background: #f7f7f8;
-  --foreground: #18181b;
+  --background: #F7F9FC;
+  --foreground: #152338;
   --card: #ffffff;
-  --muted: #f1f1f3;
-  --muted-foreground: #63636e;
-  --border: #e4e4e7;
-  --ring: #0f766e;
-  --accent: #0f766e;
+  --muted: #EFF3F8;
+  --muted-foreground: #58677B;
+  --border: #E1E7EF;
+  --ring: #0D9488;
+  --accent: #0D9488;
   --accent-foreground: #ffffff;
-  --accent-soft: #e6f4f2;
+  --accent-soft: #E9F6F4;
 
   --allow: #15803d;
   --allow-soft: #e9f7ee;
@@ -69,3 +69,26 @@ body {
 .fill-in {
   animation: fill-in 1.2s ease-out;
 }
+
+/* Shared interaction and readability defaults, including non-button controls. */
+body { line-height: 1.5; }
+::selection { background: #c9eae5; color: #0b1422; }
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 4px;
+}
+button, summary { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+.recharts-cartesian-axis-tick text { fill: var(--muted-foreground); }
+.recharts-tooltip-wrapper { z-index: 20; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Darker teal keeps small links and labels readable on light surfaces. */
+.text-accent { color: #0f766e; }
