@@ -84,8 +84,9 @@ test("cash chart selects the clicked week and keeps negative balances signed", a
   await page.goto("/cash");
   await page.getByRole("button", { name: /^Week 1,/ }).click();
   const chart = page.locator(".recharts-wrapper").first();
+  await chart.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
   const chartBox = await chart.boundingBox();
-  const weekTick = await chart.locator(".recharts-xAxis .recharts-cartesian-axis-tick").filter({ hasText: /^W3 / }).boundingBox();
+  const weekTick = await chart.locator("text").filter({ hasText: /^W3/ }).boundingBox();
   expect(chartBox).not.toBeNull();
   expect(weekTick).not.toBeNull();
   await page.mouse.move(weekTick!.x + weekTick!.width / 2, chartBox!.y + 120);

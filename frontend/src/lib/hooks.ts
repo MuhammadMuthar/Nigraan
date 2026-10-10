@@ -110,8 +110,8 @@ export function useApi<T>(path: string | null) {
     if (path) revalidate(path);
   }, [path]);
   const reload = useCallback(async () => {
-    if (path) await load(path).catch(() => undefined);
+    if (path) await load(path, true).catch(() => undefined);
   }, [path]);
   const data = entry?.data === undefined ? null : (entry.data as T);
-  return { data, error: data === null ? (entry?.error ?? null) : null, loading: !entry, reload };
+  return { data, error: entry?.error ?? null, loading: !entry, reload };
 }

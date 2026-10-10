@@ -7,7 +7,7 @@ import uuid
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.auth import current_user, require_roles
@@ -22,7 +22,7 @@ from app.services import cash as _cash  # noqa: F401
 from app.services.cash import service as cash_svc
 from app.services.identity import norm_invoice_no
 from app.services.importer import import_csv
-from app.services.payment_runs import audit, latest_decisions, score_payments, utcnow
+from app.services.payment_runs import audit, claim_invoices, latest_decisions, score_payments, utcnow
 from app.services.runtime import runtime
 from app.services.scoring.scorer import FRAUD_TYPES
 
@@ -65,14 +65,17 @@ def get_invoice(invoice_id: int, db: Session = Depends(get_db), user: User = Dep
 def patch_invoice(invoice_id: int, body: InvoicePatch, db: Session = Depends(get_db),
                   user: User = Depends(require_roles("accountant", "approver", "owner"))):
     inv = db.get(Invoice, invoice_id) or _404("invoice")
-    if inv.status not in ("draft", "received"):
+    editable = db.execute(update(Invoice).where(Invoice.id == invoice_id, Invoice.status.in_(("draft", "received")))
+                          .values(status=Invoice.status).execution_options(synchronize_session=False))
+    if editable.rowcount != 1:
         raise ApiError(409, "locked", "Invoice is already in a payment run")
-    amounts = {f: rupees_to_paisa(str(getattr(body, f))) if getattr(body, f) is not None else int(getattr(inv, f))
+    db.refresh(inv)
+    amounts = {f: rupees_to_paisa(format(getattr(body, f), "f")) if getattr(body, f) is not None else int(getattr(inv, f))
                for f in ("subtotal", "tax", "total")}
     if body.confirm or any(getattr(body, f) is not None for f in amounts):
         if any(v < 0 for v in amounts.values()) or amounts["subtotal"] + amounts["tax"] != amounts["total"]:
             raise ApiError(422, "amount_mismatch", "Subtotal plus tax must equal the nonnegative invoice total", "total")
-    if body.lines is not None and sum(rupees_to_paisa(str(l.amount)) for l in body.lines) != amounts["subtotal"]:
+    if body.lines is not None and sum(rupees_to_paisa(format(l.amount, "f")) for l in body.lines) != amounts["subtotal"]:
         raise ApiError(422, "lines_mismatch", "Line amounts must add up to the invoice subtotal", "lines")
     if body.vendor_id is not None:
         from app.models import Vendor
@@ -95,13 +98,13 @@ def patch_invoice(invoice_id: int, body: InvoicePatch, db: Session = Depends(get
     for f in ("subtotal", "tax", "total"):
         v = getattr(body, f)
         if v is not None:
-            changed[f] = str(v)
+            changed[f] = format(v, "f")
             setattr(inv, f, amounts[f])
     if body.lines is not None:
         for l in list(inv.lines):
             db.delete(l)
-        inv.lines = [InvoiceLine(description=l.description, qty=l.qty, unit_price=rupees_to_paisa(str(l.unit_price)),
-                                 amount=rupees_to_paisa(str(l.amount))) for l in body.lines]
+        inv.lines = [InvoiceLine(description=l.description, qty=l.qty, unit_price=rupees_to_paisa(format(l.unit_price, "f")),
+                                 amount=rupees_to_paisa(format(l.amount, "f"))) for l in body.lines]
     if body.confirm and inv.status == "draft":
         if inv.vendor_id is None:
             raise ApiError(422, "vendor_required", "Pick the vendor before confirming", "vendor_id")
@@ -135,6 +138,7 @@ def score_invoice(invoice_id: int, db: Session = Depends(get_db),
             raise ApiError(409, "invoice_not_open", "Only a confirmed, open invoice can be scheduled", "invoice_id")
         if inv.total < 0:
             raise ApiError(422, "invalid_amount", "Invoice total must be nonnegative", "total")
+        claim_invoices(db, [inv.id])
         from app.services.payment_runs import active_account
 
         company = db.execute(select(Company)).scalars().first()

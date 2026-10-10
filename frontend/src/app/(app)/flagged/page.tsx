@@ -80,7 +80,7 @@ function FlaggedInvoices() {
   }
 
   if (loading && !data) return <Loading />;
-  if (error) return <Empty icon={<ShieldAlert />} title="Could not load the flagged invoices">{error.message}</Empty>;
+  if (error) return <Empty icon={<ShieldAlert />} title="Could not load the flagged invoices"><p>{error.message}</p><Button variant="outline" className="mt-3" onClick={reload}>Retry</Button></Empty>;
   if (!run) {
     return (
       <>

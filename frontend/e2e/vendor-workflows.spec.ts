@@ -16,7 +16,7 @@ async function resetAndLoad(page: Page) {
 function pakistanIban(bank: string, account: string) {
   const base = `PK00${bank}${account}`;
   const digits = (base.slice(4) + base.slice(0, 4)).split("").map((char) => /[A-Z]/.test(char) ? String(parseInt(char, 36)) : char).join("");
-  return `PK${String(98n - BigInt(digits) % 97n).padStart(2, "0")}${bank}${account}`;
+  return `PK${String(BigInt(98) - BigInt(digits) % BigInt(97)).padStart(2, "0")}${bank}${account}`;
 }
 
 // A readable synthetic invoice exercises the real PDF reader without adding a fixture dependency.

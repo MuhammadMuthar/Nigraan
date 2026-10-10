@@ -1,9 +1,9 @@
 // Money arrives from the API as integer paisa. Displayed as Rs with lakh/crore grouping.
-const IN = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+const IN = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
 
 export function rs(paisa: number | null | undefined): string {
   if (paisa === null || paisa === undefined) return "—";
-  const rupees = Math.trunc(paisa / 100);
+  const rupees = paisa / 100;
   return `${rupees < 0 ? "-" : ""}Rs\u00a0${IN.format(Math.abs(rupees))}`; // non-breaking: "Rs" never wraps away from the number
 }
 
