@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     allowed_origin: str = "http://localhost:3000"
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.5-flash"
-    ai_timeout_s: float = 20.0
+    ai_timeout_s: float = 8.0
 
     # The company's "today". The synthetic history ends the day before.
     as_of_date: date = date(2026, 10, 12)

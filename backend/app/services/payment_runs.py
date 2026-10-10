@@ -13,7 +13,8 @@ from app.models import AuditLog, Case, CaseEvent, Company, Invoice, Payment, Pay
 from app.money import fmt_rs
 from app.services.cash.service import effective_decision, latest_decisions
 from app.services.runtime import runtime
-from app.services.scoring.scorer import FRAUD_TYPES, ScoreResult
+from app.services.scoring.rules import comparison_for, comparison_summary
+from app.services.scoring.scorer import FRAUD_TYPES, ScoreResult, suspected_type
 
 OPEN_STATUSES = ("pending",)  # a line still waiting for a decision
 
@@ -156,9 +157,11 @@ def line_view(p: Payment, s: RiskScore | None, users: dict[int, str]) -> dict:
         "top_reason": top["text"] if top else ("No significant risk signals" if s else None),
         "reasons": [r for r in reasons if r.get("engine") != "info"][:4],
         "info": [r["text"] for r in reasons if r.get("engine") == "info"],
-        "fraud_type": (s.engine_scores_json or {}).get("fraud_type") if s else None,
+        "fraud_type": suspected_type(reasons, s.decision, (s.evidence_json or {}).get("features")) if s else None,
+        "rules_comparison": (s.evidence_json or {}).get("rules_comparison") if s else None,
         "created_by": users.get(p.created_by), "created_by_id": p.created_by, "created_at": p.created_at.isoformat() + "Z",
         "approved_by": users.get(p.approved_by), "pay_date": p.pay_date.isoformat(), "override": p.override_decision,
+        "override_by": users.get(p.override_by), "override_by_id": p.override_by,
         "bank_last4": p.bank_account.iban_last4, "bank_name": p.bank_account.bank_name,
         "model_version": s.model_version if s else None,
     }
@@ -171,6 +174,13 @@ def run_detail(db: Session, run: PaymentRun, with_cash: bool = True) -> dict:
     ps = list(run.payments)
     scores = latest_decisions(db, [p.id for p in ps])
     lines = [line_view(p, scores.get(p.id), users) for p in ps]
+    missing_comparisons = [line for line in lines if line["model_decision"] is not None and not line["rules_comparison"]]
+    if missing_comparisons:
+        ctx = runtime.scoring_context(db)
+        for line in missing_comparisons:
+            evidence = scores[line["id"]].evidence_json or {}
+            line["rules_comparison"] = comparison_for(ctx.features, line["id"], evidence.get("features"),
+                                                      evidence.get("rules"), (evidence.get("graph") or {}).get("signal"))
     order = {"blocked": 0, "review": 1, "allow": 2, "unscored": 3}
     lines.sort(key=lambda l: (order.get(l["decision"], 4), -(l["score"] or 0)))
     totals = {}
@@ -182,11 +192,17 @@ def run_detail(db: Session, run: PaymentRun, with_cash: bool = True) -> dict:
     for l in lines:
         l["case"] = case_by_pay.get(l["id"])
     company = db.execute(select(Company)).scalars().first()
+    commitments = vendor_commitments(ps)
+    for line in lines:
+        line["vendor_commitment_amount"] = commitments.get(line["vendor_id"], 0)
+        line["requires_owner_approval"] = line["vendor_commitment_amount"] > company.approval_limit
     out = {
         "id": run.id, "name": run.name, "run_date": run.run_date.isoformat(), "status": run.status,
         "created_at": run.created_at.isoformat() + "Z", "lines": lines, "totals": totals,
         "open_lines": sum(1 for l in lines if l["status"] in OPEN_STATUSES),
         "approval_limit": int(company.approval_limit), "model_version": runtime.bundle.version,
+        "approval_policy": "The approval limit applies to each vendor's combined pending, approved and exported amount within this run. Held, blocked, rejected and settled lines are excluded. Case clearers and review-line creators cannot approve their own instruction.",
+        "rules_comparison": comparison_summary(lines),
         "can_export": not any(l["status"] in OPEN_STATUSES for l in lines) and any(l["status"] == "approved" for l in lines),
     }
     if with_cash:
@@ -194,11 +210,26 @@ def run_detail(db: Session, run: PaymentRun, with_cash: bool = True) -> dict:
     return out
 
 
+def vendor_commitments(payments: list[Payment]) -> dict[int, int]:
+    """Current run exposure, including approvals and unsettled exports already committed.
+
+    Counting all pending siblings prevents a split purchase being approved one line at
+    a time. A held/rejected/blocked instruction cannot be exported and is excluded;
+    released instructions are settled and no longer a payable commitment.
+    """
+    totals: dict[int, int] = {}
+    for payment in payments:
+        if payment.status in ("pending", "approved", "exported"):
+            totals[payment.vendor_id] = totals.get(payment.vendor_id, 0) + int(payment.amount)
+    return totals
+
+
 def approve_lines(db: Session, run: PaymentRun, user: User, payment_ids: list[int], note: str | None = None) -> dict:
     lock_open_run(db, run)
     company = db.execute(select(Company)).scalars().first()
     ps = {p.id: p for p in run.payments}
     scores = latest_decisions(db, list(ps))
+    commitments = vendor_commitments(list(ps.values()))
     for pid in payment_ids:  # validate everything first: all-or-nothing
         p = ps.get(pid)
         if p is None:
@@ -214,8 +245,12 @@ def approve_lines(db: Session, run: PaymentRun, user: User, payment_ids: list[in
         if d in ("review",) and p.created_by == user.id:
             raise ApiError(403, "same_user", f"{p.vendor.name}: needs a second approver - you entered this line",
                            "payment_ids")
-        if p.amount > company.approval_limit and user.role != "owner":
-            raise ApiError(403, "over_limit", f"{p.vendor.name}: above the {fmt_rs(company.approval_limit)} limit, "
+        if p.override_by == user.id:
+            raise ApiError(403, "same_clearer", f"{p.vendor.name}: a different person must approve this line after you cleared its case",
+                           "payment_ids")
+        if commitments[p.vendor_id] > company.approval_limit and user.role != "owner":
+            raise ApiError(403, "over_limit", f"{p.vendor.name}: combined run commitment {fmt_rs(commitments[p.vendor_id])} "
+                                              f"is above the {fmt_rs(company.approval_limit)} limit, "
                                               "owner approval required", "payment_ids")
         if d == "unscored":
             raise ApiError(409, "unscored", f"{p.vendor.name}: line has not been scored yet", "payment_ids")
@@ -239,12 +274,18 @@ def approve_all_green(db: Session, run: PaymentRun, user: User) -> dict:
     lock_open_run(db, run)
     company = db.execute(select(Company)).scalars().first()
     scores = latest_decisions(db, [p.id for p in run.payments])
+    commitments = vendor_commitments(list(run.payments))
     ok, skipped = [], []
     for p in run.payments:
         if p.status != "pending" or effective_decision(p, scores.get(p.id)) != "allow":
             continue
-        if p.amount > company.approval_limit and user.role != "owner":
-            skipped.append({"id": p.id, "vendor": p.vendor.name, "reason": "above approval limit: owner must approve"})
+        if p.override_by == user.id:
+            skipped.append({"id": p.id, "vendor": p.vendor.name,
+                            "reason": "a different person must approve a line after its case is cleared"})
+            continue
+        if commitments[p.vendor_id] > company.approval_limit and user.role != "owner":
+            skipped.append({"id": p.id, "vendor": p.vendor.name,
+                            "reason": "combined vendor amount above approval limit: owner must approve"})
             continue
         ok.append(p.id)
     if ok:

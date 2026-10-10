@@ -46,11 +46,11 @@ def feature_reason(name: str, v: float, f: dict) -> str | None:
     if name == "vendor_prior_invoices":
         return f"Only {v:.0f} previous invoice{'s' if v != 1 else ''} from this vendor" if v <= 5 else None
     if name == "is_round_amount":
-        return "Suspiciously round amount" if v else None
+        return "Round invoice amount" if v else None
     if name == "vendor_round_share":
         return f"{v:.0%} of this vendor's invoices are round amounts" if v >= 0.5 else None
     if name == "no_sales_tax":
-        return "No sales tax charged (unregistered vendor)" if v else None
+        return "No sales tax charged on this invoice" if v else None
     if name == "same_payee_48h":
         return f"{v:.0f} other payment{'s' if v != 1 else ''} to this vendor in the last 48 h" if v >= 1 else None
     if name == "same_payee_48h_vs_limit":
@@ -69,10 +69,10 @@ def feature_reason(name: str, v: float, f: dict) -> str | None:
         return "Vague line items (e.g. 'consultancy services')" if v >= 0.5 else None
     if name == "days_since_invoice_date":
         if v <= 3:
-            return f"Paid {max(0, round(v))} day{'s' if round(v) != 1 else ''} after the invoice date (no time to verify)"
+            return f"Payment entered {max(0, round(v))} day{'s' if round(v) != 1 else ''} after the invoice date"
         return None
     if name == "days_to_due":
-        return f"Paid {v:.0f} days before it is due" if v >= 7 else None
+        return f"Payment entered {v:.0f} days before the invoice is due" if v >= 7 else None
     if name == "amount_log":
         return f"Large amount (Rs {10 ** v:,.0f})" if v >= 5.5 else None
     return None

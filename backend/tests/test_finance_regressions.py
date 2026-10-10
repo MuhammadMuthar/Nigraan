@@ -13,7 +13,7 @@ from app.models import Case, Company, Invoice, Payment, PaymentRun, RiskScore, U
 from app.services.cash.service import CashInputs
 from app.services.payment_runs import utcnow
 from app.services import payment_runs
-from tests.conftest import login
+from tests.conftest import login, resolution_payload
 
 
 @pytest.fixture
@@ -291,7 +291,7 @@ def test_false_alarm_after_export_recovers_live_line_without_duplicate_instructi
     assert first_export.status_code == 200, first_export.text
     assert len(first_export.text.strip().splitlines()) == 2
     assert client.get("/api/v1/cash/projection", headers=owner).json()["projection"] == before
-    response = client.post(f"/api/v1/cases/{case_id}/resolve", headers=owner, json={"outcome": "false_alarm"})
+    response = client.post(f"/api/v1/cases/{case_id}/resolve", headers=owner, json=resolution_payload(client, case_id))
     assert response.status_code == 200, response.text
     with SessionLocal() as db:
         assert db.get(PaymentRun, run_id).status == "open"
@@ -335,7 +335,7 @@ def test_false_alarm_does_not_reopen_a_historical_run(client, invoice):
         db.commit()
         case_id = case.id
     response = client.post(f"/api/v1/cases/{case_id}/resolve", headers=login(client, "rashid"),
-                           json={"outcome": "false_alarm"})
+                           json=resolution_payload(client, case_id))
     assert response.status_code == 200, response.text
     with SessionLocal() as db:
         assert db.get(PaymentRun, run_id).status == "exported"

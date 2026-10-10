@@ -2,7 +2,8 @@
 
 Expected collection date (deterministic baseline, section 7.2):
   due_date + the customer's median prior delay (global median if < 5 settled invoices).
-  Overdue beyond the usual delay -> as-of + 7 days, marked as an assumption. Never a past date.
+  Overdue beyond the usual delay -> no defensible collection date; excluded from base cash.
+  The legacy next-week policy is retained explicitly for reproducing the original backtest.
 """
 from __future__ import annotations
 
@@ -26,13 +27,17 @@ class ReceiptEstimate:
     amount: int
     disputed: int
     due_date: date
-    expected_date: date
+    expected_date: date | None
     basis: str
     overdue_days: int
     median_delay: float
     limited_history: bool
     settled_count: int
     note: str
+
+    @property
+    def included_in_base(self) -> bool:
+        return self.expected_date is not None
 
 
 def _d(x) -> date:
@@ -62,7 +67,9 @@ def open_receivables(receivables: pd.DataFrame, as_of: date) -> pd.DataFrame:
 
 
 def estimate_receipts(receivables: pd.DataFrame, as_of: date, *, include_disputed: bool = False,
-                      method: str = "median_delay") -> list[ReceiptEstimate]:
+                      method: str = "median_delay", stale_policy: str = "exclude_unconfirmed") -> list[ReceiptEstimate]:
+    if stale_policy not in ("exclude_unconfirmed", "legacy_next_week"):
+        raise ValueError(f"unknown stale-receipt policy: {stale_policy}")
     stats, (global_median, global_p80) = customer_delay_stats(receivables, as_of)
     out: list[ReceiptEstimate] = []
     for row in open_receivables(receivables, as_of).itertuples(index=False):
@@ -87,9 +94,14 @@ def estimate_receipts(receivables: pd.DataFrame, as_of: date, *, include_dispute
             exp = slow
             note = "Already later than this customer's median delay; using their slow-payer (80th percentile) delay"
         else:
-            exp = as_of + timedelta(days=STALE_DAYS)
-            basis, note = "assumption", "Overdue beyond this customer's usual delay; assumed next week"
-        exp = next_business_day(exp)
+            basis = "assumption"
+            if stale_policy == "legacy_next_week":
+                exp = as_of + timedelta(days=STALE_DAYS)
+                note = "Legacy policy: overdue beyond usual delay; assumed next week"
+            else:
+                exp = None
+                note = "Overdue beyond the historical median and slow-payer delay; collection date unconfirmed, excluded from base cash"
+        exp = next_business_day(exp) if exp is not None else None
         out.append(ReceiptEstimate(int(row.id), int(row.customer_id), amount, disputed, due, exp, basis, overdue,
                                    float(med), limited, n, note))
     return out
@@ -99,7 +111,7 @@ def receipt_flows(estimates: list[ReceiptEstimate], customer_names: dict[int, st
     names = customer_names or {}
     return [Flow(e.expected_date, e.amount, "receipt", e.basis,
                  f"{names.get(e.customer_id, 'Customer')} (receivable)", f"receivable:{e.receivable_id}")
-            for e in estimates if e.amount > 0]
+            for e in estimates if e.amount > 0 and e.expected_date is not None]
 
 
 def outflow_flows(scheduled: pd.DataFrame, as_of: date) -> list[Flow]:

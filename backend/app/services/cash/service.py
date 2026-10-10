@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 from datetime import date
+from functools import lru_cache
+import hashlib
+import json
+from pathlib import Path
 
 import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Company, Invoice, Payment, PaymentRun, RiskScore, ScheduledOutflow, Vendor
+from app.config import get_settings
 from app.money import fmt_rs
 from app.services.cash.engine import Flow, Projection, drop_flows, move_flow, project
 from app.services.cash.inputs import estimate_receipts, outflow_flows, payable_flows, receipt_flows, run_flows
@@ -138,10 +143,10 @@ def responsible_receivables(ci: CashInputs, p: Projection, k: int = 3) -> list[d
     low_day = p.low_point_day
     out = []
     for e in ci.estimates:
-        if e.due_date <= low_day < e.expected_date and e.amount > 0:
+        if e.due_date <= low_day and (e.expected_date is None or low_day < e.expected_date) and e.amount > 0:
             r = risk.get(e.receivable_id, {})
             out.append(_rec_row(ci, e, r))
-    out.sort(key=lambda x: -x["amount"] * (0.5 + x.get("risk", 0.5)))
+    out.sort(key=lambda x: -x["amount"] * (0.5 + (x["risk"] if x.get("risk") is not None else 0.5)))
     return out[:k]
 
 
@@ -151,9 +156,56 @@ def _rec_row(ci: CashInputs, e, r: dict) -> dict:
     return {
         "receivable_id": e.receivable_id, "customer_id": e.customer_id, "customer": cust["name"], "segment": cust["segment"],
         "invoice_no": rec["invoice_no"], "amount": e.amount, "amount_fmt": fmt_rs(e.amount), "due_date": e.due_date.isoformat(),
-        "expected_date": e.expected_date.isoformat(), "overdue_days": e.overdue_days, "basis": e.basis, "note": e.note,
+        "expected_date": e.expected_date.isoformat() if e.expected_date is not None else None,
+        "included_in_base": e.included_in_base, "overdue_days": e.overdue_days, "basis": e.basis, "note": e.note,
         "median_delay": e.median_delay, "limited_history": r.get("limited_history", e.limited_history),
         "risk": r.get("risk"), "reasons": r.get("reasons", []), "disputed": e.disputed,
+    }
+
+
+def collection_policy(ci: CashInputs) -> dict:
+    unconfirmed = [e for e in ci.estimates if not e.included_in_base and e.amount > 0]
+    return {"name": "exclude_unconfirmed", "unconfirmed_count": len(unconfirmed),
+            "unconfirmed_amount": sum(e.amount for e in unconfirmed),
+            "label": "Overdue beyond historical collection delays is excluded until a dated scenario is supplied."}
+
+
+@lru_cache(maxsize=4)
+def _review_metrics(models_dir: str) -> dict:
+    """Read the additive offline artifact once; never run an evaluation in a request."""
+    path = Path(models_dir) / "cash_review_metrics.json"
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text())
+        inputs = Path(__file__).with_name("inputs.py")
+        if data.get("inputs_sha256") != hashlib.sha256(inputs.read_bytes()).hexdigest():
+            return {}
+        return data
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def validation_metadata() -> dict:
+    artifact = _review_metrics(str(get_settings().models_dir))
+    current = artifact.get("policies", {}).get("exclude_unconfirmed")
+    saved = runtime.bundle.metrics
+    measured = current or saved.get("cash", {})
+    origins = measured.get("origins", [])
+    return {
+        "forecast_horizon_weeks": 13,
+        "backtest_horizon_weeks": measured.get("horizon_weeks"),
+        "origins": origins,
+        "synthetic": True,
+        "seed": artifact.get("seed") if current else saved.get("seed"),
+        "receipt_policy": "exclude_unconfirmed" if current else "legacy_next_week",
+        "current_policy_backtested": bool(current),
+        "mae_rupees_per_week": measured.get("median_delay", {}).get("mae_rupees_per_week"),
+        "due_date_mae_rupees_per_week": measured.get("due_date", {}).get("mae_rupees_per_week"),
+        "improvement_vs_due_date": measured.get("improvement_vs_due_date"),
+        "wape": measured.get("median_delay", {}).get("wape"),
+        "generated_at": artifact.get("generated_at") if current else saved.get("generated_at"),
+        "scope": "Receipt timing tested over the backtest horizon only; weeks beyond it and full reserve outcomes are not validated.",
     }
 
 
@@ -171,6 +223,7 @@ def run_cash_panel(db: Session, run: PaymentRun) -> dict:
         totals[l["decision"] if l["decision"] in totals else "unscored"] += l["amount"]
     return {
         "as_of": ci.as_of.isoformat(), "cash_before_run": ci.opening, "reserve": ci.reserve,
+        "collection_policy": collection_policy(ci), "validation": validation_metadata(),
         "run_total": sum(totals.values()), "totals_by_decision": totals, "blocked_amount": totals["blocked"],
         "with_nigraan": _panel_case(p_nig), "release_everything": _panel_case(p_all), "hold_yellow": _panel_case(p_green),
         "responsible_receivables": responsible_receivables(ci, p_nig if p_nig.first_breach else p_all),
@@ -193,17 +246,19 @@ def outlook(db: Session, run_id: int | None, hold_yellow: bool = False) -> dict:
     flows = ci.base_flows() + ci.line_flows("green_only" if hold_yellow else "nigraan")
     p = ci.project(flows)
     recs = [_rec_row(ci, e, late["by_id"].get(e.receivable_id, {})) for e in ci.estimates]
-    recs.sort(key=lambda r: r["expected_date"])
+    recs.sort(key=lambda r: r["expected_date"] or "9999")
     return {"projection": proj_payload(p), "receivables": recs, "run_id": run.id if run else None,
+            "collection_policy": collection_policy(ci), "validation": validation_metadata(),
             "risk_label": late["label"], "risk_model": late["kind"],
             "assumptions": [
                 "Only invoices already issued or received are projected; new sales and purchases are not forecast.",
-                "Expected receipt date = due date + the customer's median past delay (segment median if < 5 settled invoices).",
+                "Expected receipt date = due date + the customer's median past delay (global median if fewer than 5 settled invoices).",
+                "Overdue beyond median and slow-payer (80th percentile) delay has no confirmed date and is excluded from base cash. Add a dated What-if to assess collection; this does not record a payment promise.",
                 "Disputed amounts are excluded.",
                 "Vendor invoices are paid in the weekly run that covers their due date.",
                 "Bank-file export is not settlement; exported instructions remain cash outflows at their value date until reconciled.",
                 "Utility bills after this month are estimates (assumption)."],
-            "basis_legend": {"fact": "Contracted or already approved", "estimate": "Model estimate (expected date)",
+            "basis_legend": {"fact": "Contracted or already approved", "estimate": "Historical-delay estimate (expected date)",
                              "assumption": "Assumption"}}
 
 
@@ -212,8 +267,26 @@ def scenario(db: Session, moves: list[dict], hold_yellow: bool, run_id: int | No
     ci = CashInputs(db, run)
     base_flows = ci.base_flows() + ci.line_flows("nigraan")
     scen = list(ci.base_flows())
+    estimates = {e.receivable_id: e for e in ci.estimates}
+    assumed_amount, assumed_count = 0, 0
+    moved_ids: set[int] = set()
     for m in moves:
-        scen = move_flow(scen, f"receivable:{int(m['receivable_id'])}", date.fromisoformat(m["new_date"]) if isinstance(m["new_date"], str) else m["new_date"])
+        rid = int(m["receivable_id"])
+        if rid in moved_ids:
+            raise ValueError("Each receivable can have only one scenario collection date")
+        moved_ids.add(rid)
+        estimate = estimates.get(rid)
+        if estimate is None or estimate.amount <= 0:
+            raise KeyError(rid)
+        new_day = date.fromisoformat(m["new_date"]) if isinstance(m["new_date"], str) else m["new_date"]
+        if not estimate.included_in_base:
+            scen.append(Flow(new_day, estimate.amount, "receipt", "assumption",
+                             f"{ci.customers.loc[estimate.customer_id, 'name']} (unconfirmed collection scenario)",
+                             f"receivable:{rid}"))
+            assumed_amount += estimate.amount
+            assumed_count += 1
+        else:
+            scen = move_flow(scen, f"receivable:{rid}", new_day)
     scen = scen + ci.line_flows("green_only" if hold_yellow else "nigraan")
     pb, ps = ci.project(base_flows), ci.project(scen)
     return {
@@ -221,7 +294,9 @@ def scenario(db: Session, moves: list[dict], hold_yellow: bool, run_id: int | No
         "delta": {"low_point_change": ps.low_point - pb.low_point,
                   "breach_before": pb.first_breach.isoformat() if pb.first_breach else None,
                   "breach_after": ps.first_breach.isoformat() if ps.first_breach else None,
-                  "total_in_change": ps.total_in - pb.total_in},
+                  "total_in_change": ps.total_in - pb.total_in,
+                  "unconfirmed_receipts_assumed_amount": assumed_amount,
+                  "unconfirmed_receipts_assumed_count": assumed_count},
     }
 
 
