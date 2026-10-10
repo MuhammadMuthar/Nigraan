@@ -8,7 +8,8 @@ import { CalendarClock, CircleCheck, Loader2, Play, RefreshCw, TriangleAlert, Wa
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";
 import { day, dayFull, pct, rs, rsShort } from "@/lib/format";
-import type { Projection, ReceivableRow } from "@/lib/types";
+import type { CashValidation, CollectionPolicy, Projection, ReceivableRow } from "@/lib/types";
+import { CashValidationNote, UnconfirmedCollections } from "@/components/app/cash-validation-note";
 import { PageTitle } from "@/components/app/shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,8 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { BAR_CURSOR, LINE_CURSOR, TOOLTIP } from "@/components/app/chart-style";
 
-type Outlook = { projection: Projection; receivables: ReceivableRow[]; run_id: number | null; risk_label: string; risk_model: string; assumptions: string[]; basis_legend: Record<string, string> };
-type ScenarioRes = { base: Projection; scenario: Projection; delta: { low_point_change: number; breach_before: string | null; breach_after: string | null; total_in_change: number } };
+type Outlook = { projection: Projection; receivables: ReceivableRow[]; run_id: number | null; risk_label: string; risk_model: string; assumptions: string[]; basis_legend: Record<string, string>; collection_policy: CollectionPolicy; validation: CashValidation };
+type ScenarioRes = { base: Projection; scenario: Projection; delta: { low_point_change: number; breach_before: string | null; breach_after: string | null; total_in_change: number; unconfirmed_receipts_assumed_amount: number; unconfirmed_receipts_assumed_count: number } };
 
 const k = (p: number) => p / 100;
 
@@ -29,11 +30,12 @@ export default function CashPage() {
   const { data, loading, error, reload } = useApi<Outlook>("/cash/projection");
   const [retrying, setRetrying] = useState(false);
   const [week, setWeek] = useState<number | null>(null);
-  const [moves, setMoves] = useState<{ receivable_id: number; customer: string; amount: number; from: string; new_date: string }[]>([]);
+  const [moves, setMoves] = useState<{ receivable_id: number; customer: string; amount: number; from: string | null; new_date: string }[]>([]);
   const [holdYellow, setHoldYellow] = useState(false);
   const [scen, setScen] = useState<ScenarioRes | null>(null);
   const [busy, setBusy] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [unconfirmedOnly, setUnconfirmedOnly] = useState(false);
 
   const p = data?.projection;
   const focusWeek = week ?? (p ? (p.weeks.find((w) => w.low_day === p.low_point_day)?.week ?? 1) : 1);
@@ -71,15 +73,16 @@ export default function CashPage() {
 
   const recs = data.receivables;
   const highRisk = [...recs].sort((a, b) => (b.risk ?? 0) * b.amount - (a.risk ?? 0) * a.amount);
-  const shown = showAll ? recs : highRisk.slice(0, 15);
+  const shown = unconfirmedOnly ? recs.filter((r) => r.included_in_base === false) : showAll ? recs : highRisk.slice(0, 15);
   const compare = scen ? scen.base.weeks.map((w, i) => ({ label: `W${w.week}`, base: k(w.low), scenario: k(scen.scenario.weeks[i].low) })) : [];
 
   return (
     <>
-      <PageTitle title="Cash outlook" sub={`13 weeks from ${dayFull(p.as_of)} · deterministic cash engine · receipts dated by each customer's payment history`} />
+      <PageTitle title="Cash outlook" sub={`${data.validation.forecast_horizon_weeks} weeks from ${dayFull(p.as_of)} · deterministic cash engine · historical receipt estimates`} />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-xs">
-        <span className="font-medium">Synthetic demo forecast · reserve checked daily</span><span className="text-muted-foreground">Facts, model estimates and assumptions are shown separately</span>
+        <span className="font-medium">Synthetic demo forecast · reserve checked daily</span><span className="text-muted-foreground">Facts, historical estimates and assumptions are shown separately</span>
       </div>
+      <div className="mb-5 grid gap-3"><CashValidationNote validation={data.validation} /><UnconfirmedCollections policy={data.collection_policy} /></div>
       <div className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Card><CardContent className="pt-5"><Stat label="Cash today" value={<CountUp value={p.opening} format={rs} />} sub="bank balance (fact)" /></CardContent></Card>
         <Card><CardContent className="pt-5"><Stat label="Reserve" value={rs(p.reserve)} sub="minimum the owner wants to keep" /></CardContent></Card>
@@ -91,7 +94,7 @@ export default function CashPage() {
       <Card className="mt-6 animate-rise-in [animation-delay:150ms]">
         <CardHeader>
           <CardTitle>13-week cash projection</CardTitle>
-          <CardDescription>Bars: weekly receipts (above) and payments (below), split into facts, model estimates and assumptions. Lines: week-end balance and the daily low inside each week. Click a week for the daily view.</CardDescription>
+          <CardDescription>Bars: weekly receipts (above) and payments (below), split into facts, historical estimates and assumptions. Unconfirmed overdue collections are excluded. Lines: week-end balance and the daily low inside each week. Click a week for the daily view.</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={320}>
@@ -157,7 +160,7 @@ export default function CashPage() {
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2"><CardTitle>What if…</CardTitle><Badge variant="outline">Scenario · no changes to the books</Badge></div>
-            <CardDescription>Move a collection to a promised date, or hold the yellow lines of this run. Scenarios never change the books.</CardDescription>
+            <CardDescription>Move an estimated collection, assume a date for an excluded overdue receipt, or hold the yellow lines of this run. Scenario dates are assumptions; they do not record a customer promise or change the books.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
             {moves.length === 0 && <div className="text-sm text-muted-foreground">Pick a receivable below and press <b>Move</b> to set a new collection date.</div>}
@@ -165,7 +168,7 @@ export default function CashPage() {
               <div key={m.receivable_id} className="flex animate-rise-in flex-wrap items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
                 <CalendarClock className="size-4 text-accent" />
                 <span className="font-medium">{m.customer}</span><span className="tabular text-muted-foreground">{rs(m.amount)}</span>
-                <span className="text-xs text-muted-foreground">expected {day(m.from)} →</span>
+                <span className="text-xs text-muted-foreground">{m.from ? `expected ${day(m.from)}` : "excluded from base; assumed date"} →</span>
                 <Input aria-label={`New collection date for ${m.customer}`} type="date" className="h-8 w-40" value={m.new_date} min={p.as_of} disabled={busy} onChange={(e) => { setMoves((xs) => xs.map((x, j) => (j === i ? { ...x, new_date: e.target.value } : x))); setScen(null); }} />
                 <Button size="icon" variant="ghost" className="ml-auto size-7" disabled={busy} onClick={() => { setMoves((xs) => xs.filter((_, j) => j !== i)); setScen(null); }} aria-label="Remove"><X /></Button>
               </div>
@@ -179,7 +182,7 @@ export default function CashPage() {
                   <div><div className="text-muted-foreground">First breach: base</div><div className="text-base font-semibold">{scen.delta.breach_before ? day(scen.delta.breach_before) : "none"}</div></div>
                   <div><div className="text-muted-foreground">First breach: scenario</div><div className={cn("text-base font-semibold", scen.delta.breach_after ? "text-blocked" : "text-allow")}>{scen.delta.breach_after ? day(scen.delta.breach_after) : "none"}</div></div>
                 </div>
-                <div className="text-[11px] text-muted-foreground">Total receipts change: {rs(scen.delta.total_in_change)} (moving a collection changes timing, never the total)</div>
+                <div className="text-xs text-muted-foreground">Receipts within the 13-week horizon change by {rs(scen.delta.total_in_change)}.{scen.delta.unconfirmed_receipts_assumed_count > 0 ? <> The scenario assumes collection of {rs(scen.delta.unconfirmed_receipts_assumed_amount)} across {scen.delta.unconfirmed_receipts_assumed_count} previously excluded receipt(s), at the selected dates.</> : <> Moving a receipt changes its date once; dates outside the horizon change the horizon total.</>}</div>
                 <ResponsiveContainer width="100%" height={160}>
                   <LineChart data={compare} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -201,9 +204,12 @@ export default function CashPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div>
             <div className="text-sm font-semibold">Open receivables ({recs.length})</div>
-            <div className="text-xs text-muted-foreground">{showAll ? "Sorted by expected date" : "Riskiest first (amount × late risk)"} · {data.risk_label} from the {data.risk_model?.toUpperCase()} model, predicted at issue date</div>
+            <div className="text-xs text-muted-foreground">{unconfirmedOnly ? "Unconfirmed dates · excluded from base cash" : showAll ? "Sorted by expected date; unconfirmed last" : "Riskiest first (amount × late risk)"} · {data.risk_label} from the {data.risk_model?.toUpperCase()} model, predicted at issue date</div>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setShowAll(!showAll)}>{showAll ? "Show riskiest 15" : "Show all"}</Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={unconfirmedOnly} onChange={(e) => setUnconfirmedOnly(e.target.checked)} />Unconfirmed only ({data.collection_policy.unconfirmed_count})</label>
+            <Button size="sm" variant="outline" disabled={unconfirmedOnly} onClick={() => setShowAll(!showAll)}>{showAll ? "Show riskiest 15" : "Show all"}</Button>
+          </div>
         </div>
         <Table>
           <THead><TR><TH>Customer</TH><TH>Invoice</TH><TH className="text-right">Amount</TH><TH>Due</TH><TH>Expected</TH><TH>Late risk</TH><TH>Why</TH><TH /></TR></THead>
@@ -214,7 +220,7 @@ export default function CashPage() {
                 <TD className="whitespace-nowrap text-xs">{r.invoice_no}</TD>
                 <TD className="tabular whitespace-nowrap text-right">{rs(r.amount)}{(r.disputed ?? 0) > 0 && <div className="text-[10px] text-review">{rs(r.disputed ?? 0)} disputed (excluded)</div>}</TD>
                 <TD className="text-xs">{day(r.due_date)}{(r.overdue_days ?? 0) > 0 && <div className="text-blocked">{r.overdue_days} days overdue</div>}</TD>
-                <TD className="text-xs">{day(r.expected_date)}{r.basis === "assumption" && <Tooltip content={r.note ?? ""}><span><Badge variant="outline" className="ml-1">assumed</Badge></span></Tooltip>}</TD>
+                <TD className="text-xs">{r.included_in_base === false ? <Tooltip content={r.note ?? ""}><span><Badge variant="outline">Unconfirmed</Badge><span className="mt-1 block text-muted-foreground">Excluded from base</span></span></Tooltip> : <>{day(r.expected_date)}{r.basis === "assumption" && <Tooltip content={r.note ?? ""}><span><Badge variant="outline" className="ml-1">assumed</Badge></span></Tooltip>}</>}</TD>
                 <TD>
                   {r.limited_history ? <Badge variant="outline">Limited history</Badge> : (
                     <div className="flex items-center gap-1.5"><div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted"><div className={cn("grow-x h-full", (r.risk ?? 0) >= 0.6 ? "bg-blocked" : (r.risk ?? 0) >= 0.35 ? "bg-review" : "bg-allow")} style={{ width: pct(r.risk) }} /></div><span className="tabular text-xs">{pct(r.risk)}</span></div>
@@ -222,8 +228,8 @@ export default function CashPage() {
                 </TD>
                 <TD className="max-w-[300px] text-xs text-muted-foreground"><div className="line-clamp-2">{r.reasons.join(" · ") || "—"}</div></TD>
                 <TD className="text-right">
-                  <Button size="sm" variant="ghost" disabled={busy || moves.some((m) => m.receivable_id === r.receivable_id)}
-                    onClick={() => { setMoves((xs) => [...xs, { receivable_id: r.receivable_id!, customer: r.customer, amount: r.amount, from: r.expected_date!, new_date: nextWeekday(p.as_of, 3) }]); setScen(null); }}>Move</Button>
+                  <Button size="sm" variant="ghost" disabled={busy || r.amount <= 0 || moves.some((m) => m.receivable_id === r.receivable_id)}
+                    onClick={() => { setMoves((xs) => [...xs, { receivable_id: r.receivable_id!, customer: r.customer, amount: r.amount, from: r.expected_date, new_date: nextWeekday(p.as_of, 3) }]); setScen(null); }}>{r.included_in_base === false ? "Assume date" : "Move"}</Button>
                 </TD>
               </TR>
             ))}
@@ -240,7 +246,7 @@ export default function CashPage() {
 }
 
 const LEG: Record<string, string> = {
-  in_fact: "Receipts: fact", in_estimate: "Receipts: model estimate", in_assumption: "Receipts: assumption",
+  in_fact: "Receipts: fact", in_estimate: "Receipts: historical estimate", in_assumption: "Receipts: assumption",
   out_fact: "Payments: fact", out_assumption: "Payments: assumption", closing: "Week-end balance", low: "Lowest daily balance",
 };
 

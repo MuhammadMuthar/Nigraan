@@ -2,7 +2,7 @@
 
 **Nigraan checks every rupee going out, and tells you whether what's coming in will cover it.**
 
-Before the weekly payment run, every vendor payment gets a green / yellow / red verdict with reasons from an AI fraud firewall. The owner also sees whether cash stays above the reserve for the next 13 weeks, using a receivables model that predicts who will pay late.
+Before the weekly payment run, every vendor payment gets a green / yellow / red verdict with evidence from a firewall combining learned models and deterministic controls. The owner also sees a 13-week cash outlook, with unconfirmed stale collections excluded from base cash. Receipt estimates have a four-week synthetic backtest; the full horizon is not validated.
 
 - **Live app:** `https://<your-vercel-app>.vercel.app` *(set after deploy, see [Deploy](#deploy))*
 - **API docs (the contract):** `https://<your-render-api>.onrender.com/docs`
@@ -11,7 +11,7 @@ Before the weekly payment run, every vendor payment gets a green / yellow / red 
 
 ## Try the demo week (2 minutes)
 
-1. Open the live app. On the login page, click **Sana Iqbal (Accountant)**. Password for all demo users: `nigraan-demo`.
+1. On the login page, click **Haji Abdul Rashid (Owner)** to reset the fictional company. Password for all demo users: `nigraan-demo`.
 
    | User | Role | Can |
    |---|---|---|
@@ -19,10 +19,8 @@ Before the weekly payment run, every vendor payment gets a green / yellow / red 
    | bilal@bismillah.pk | Approver | approve green, second-approve yellow, resolve cases |
    | rashid@bismillah.pk | Owner | everything, including payments above the Rs 5 lakh limit |
 
-2. In the **Demo** bar, click **Reset data**, then **Load demo week**. Forty vendor invoices are imported and every line is scored in about a second.
-3. **Payment run.** Read the cash panel first:
-   - *With Nigraan*, cash stays above the Rs 50 lakh reserve for 13 weeks.
-   - *If every line were released*, it breaches the reserve on Tue 13 Oct.
+2. In **Demo controls**, click **Reset data** (owner only). Sign out, sign in as **Sana Iqbal (Accountant)**, then **Load demo week**. Forty invoices are imported and scored. Prepare this before the presentation timer starts.
+3. **Payment run.** Read actual line counts, blocked amount, rules comparison and reserve outcome. Compare *With Nigraan* and *If every line were released*. Unconfirmed overdue collections are excluded: neither scenario guarantees staying above the reserve. Basic/expert rule flags are review checks, not authorization or proven fraud.
 
    Below the panel, *Needs your attention* previews the riskiest lines.
 4. Open **Flagged invoices** in the left menu (the red badge counts lines awaiting a decision): 7 red lines (locked, *View case*) and a few yellow lines (second approver); the *Allow* and *All* filters show the green lines. Click a line for the evidence drawer, or **View case** on a red line. The evidence depends on the pattern:
@@ -32,8 +30,9 @@ Before the weekly payment run, every vendor payment gets a green / yellow / red 
    - SHAP reason bars, a guarded summary, the suggested verification step, and the full agent trace with timings.
 5. Sign out, sign in as **Haji Abdul Rashid (Owner)**. Then:
    - **Approve all green**;
-   - **Confirm fraud** on a case;
-   - **Retrain**: the case outcome becomes a label and the model version bumps.
+   - Resolve a case after recording verification checks, method, evidence reference and finding (describe demo outcomes as synthetic);
+   - A false-alarm clearer cannot approve that payment; another person must approve, and combined vendor commitments over Rs 5 lakh require the owner;
+   - **Retrain** remains available: outcomes become labels and the model version bumps. Keep it outside the five-minute pitch; new model artifacts invalidate the saved review study.
 6. **Upload invoices.** Click a sample (no files needed). Fields fill in with per-field confidence, and the re-sent invoice is blocked as an exact duplicate.
 7. **Cash outlook.** 13-week chart (facts, model estimates and assumptions shown differently), daily drill-down, receivables by late risk, and a *What if* that moves a collection.
 8. **Dashboard.** Rupees protected, open cases, alerts by pattern, and model metrics vs baseline.
@@ -48,12 +47,12 @@ Before the weekly payment run, every vendor payment gets a green / yellow / red 
 
 The product cannot work without the models; ML and deterministic code make every decision. The LLM only reads documents and writes explanations.
 
-| Component | Model | Why AI and not a rule |
+| Component | Model or method | Contribution |
 |---|---|---|
 | Duplicate detector | Logistic regression on invoice-pair features (normalised-number similarity, date gap, amount difference, line-item overlap, TF-IDF char n-grams) | Catches `INV-0102` vs `INV-102` with a 0.5% change, while ignoring legit weekly standing orders that exact-match rules confuse |
 | Risk model | XGBoost on 27 leakage-safe behaviour features, with SHAP reasons mapped to plain English ("Bank account changed 2 hours before this payment") | Fraud is a combination of weak signals: timing, bank changes, price vs history, approval-limit gaps |
 | Anomaly detector | Isolation Forest | Unseen patterns |
-| Relationship graph | NetworkX over vendors, employees, users, bank/CNIC hashes, phones, addresses (time-valid edges) | Shell vendors share an identifier with an employee; disclosed related parties are down-weighted |
+| Relationship graph | Deterministic NetworkX matching over vendors, employees, users, bank/CNIC hashes, phones, addresses (time-valid edges) | Shared identifiers provide traceable evidence; disclosed related parties are down-weighted. This engine is not learned ML. |
 | Fusion | Weighted engine signals calibrated on out-of-time folds; hard rules can force a block | One explainable risk score, fixed bands at 40 / 75; not a probability |
 | Late-payment model | XGBoost vs logistic regression vs baseline (shipped XGBoost on validation PR-AUC) | Predicts at issue date which receivables will be paid late |
 | Cash engine | Deterministic daily engine, 13 weeks | Facts and estimates stay separate; mid-week breaches are caught |
@@ -81,7 +80,7 @@ More in [docs/architecture.md](docs/architecture.md).
 
 ## Evaluation: how we measured, and against what
 
-`python -m ml.evaluate --months 11-12 --seeds 42,43,44,45,46` writes [models/metrics.json](models/metrics.json) plus [docs/confusion_matrix.png](docs/confusion_matrix.png) and [docs/pr_curve.png](docs/pr_curve.png). Models train on months 1-10 and are tested on **months 11-12, which they never saw**. Every number on our slides comes from that file.
+`python -m ml.evaluate --months 11-12 --seeds 42,43,44,45,46` writes [models/metrics.json](models/metrics.json) plus [docs/confusion_matrix.png](docs/confusion_matrix.png) and [docs/pr_curve.png](docs/pr_curve.png). Models train on months 1-10 and are tested on **months 11-12, which they never saw**. The additional expert comparison and feature study are in [models/review_eval.json](models/review_eval.json); conservative receipt-policy results are in [models/cash_review_metrics.json](models/cash_review_metrics.json).
 
 **Fraud firewall** (638 payments, 22 planted frauds):
 
@@ -96,11 +95,15 @@ More in [docs/architecture.md](docs/architecture.md).
 
 The rules-only baseline flags exact duplicate numbers and amounts over the approval limit.
 
+The stronger **expert-rules** comparator flags recent bank changes, new vendors, night entry, price increases, combined payee exposure and deterministic policy/relationship checks. On the same 638 held-out payments it catches **19/22 frauds (86.4%)**, with **23.9% false alarms**, compared with the firewall's **22/22 (100%)** and **3.6% false alarms**. These broad, predefined checks are not optimized to a matching false-alarm rate. This comparison does not establish superiority to all possible expert rule systems.
+
+**Invoice-age sensitivity.** Refitting only XGBoost and Isolation Forest without `days_since_invoice_date`, retaining the shipped duplicate/graph/rules engines and fixed fusion thresholds, catches **22/22 (100%)**, with **4.1% false alarms**. Production model files were not replaced. This is one small synthetic test, not proof of generalization.
+
 **Robustness.** Across 5 different synthetic companies (90 frauds): 100% caught, 97.8% at red, 2.4% false alarms. Every fraud type is above the 70% target.
 
 **Late payments.** PR-AUC 0.91 vs 0.57 for the late-rate baseline (logistic regression 0.89). 99% of the riskiest 20% really were late.
 
-**Cash forecast.** 41% lower weekly error than "everyone pays on the due date" (Rs 35.4 lakh vs Rs 60.4 lakh mean absolute error per week).
+**Cash receipts.** The current conservative policy excludes unconfirmed overdue collections. Its four-week rolling synthetic backtest shows **15.2% lower weekly receipt error** than the matching due-date baseline (Rs 22.0 lakh vs Rs 25.9 lakh). The older next-week collection assumption produced 41% (Rs 35.4 lakh vs Rs 60.4 lakh); that older result does not evaluate the current policy. Neither result validates 13-week balances or reserve outcomes.
 
 **Document reader.** 100% field accuracy on the 40 demo PDFs with the regex fallback. That fallback was written for these layouts, so this proves the pipeline only.
 
@@ -109,7 +112,7 @@ Full details, ablations and limitations: [docs/model_card.md](docs/model_card.md
 ## Impact (assumptions, stated)
 
 - **Time.** A weekly run of ~80 lines takes an accountant and approver about 2 hours to cross-check by hand (vendor history, bank letters, duplicates). Nigraan auto-clears most lines as green: about 95% of a normal week in the backtest, and 29 of 40 in the fraud-seeded demo week. Review then focuses on the rest, which we estimate saves 60-90 minutes a week. This is an assumption to validate in a pilot.
-- **Money.** In the held-out months, Nigraan would have blocked **Rs 53.5 lakh** of planted fraud at red, vs Rs 12.6 lakh for rules-only. On the demo week it blocks Rs 32.8 lakh and keeps cash above the reserve, when releasing everything would breach it.
+- **Money.** In the held-out months, Nigraan would have blocked **Rs 53.5 lakh** of planted fraud at red, vs Rs 12.6 lakh for the simple rules comparator. Live blocked amounts and cash outcomes come from the API; protecting money and remaining above the reserve are separate questions.
 - **SDGs.**
   - **8.3**: helps micro and small enterprises formalise and grow, with digital financial controls they can afford.
   - **8.10**: strengthens the capacity of domestic financial institutions and SMEs to use financial services safely.
@@ -127,7 +130,7 @@ cd backend
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 uvicorn app.main:app --port 8000          # seeds the company on first start (~5 s)
-pytest -q                                  # 22 tests; TEST_DATABASE_URL=postgresql://... for Postgres
+pytest -q                                  # TEST_DATABASE_URL=postgresql://... for Postgres
 
 # frontend (Node 22)
 cd ../frontend
@@ -146,6 +149,8 @@ python -m data_gen.render_pdfs --seed 42        # demo_week/ PDFs, CSV, ground t
 python -m ml.train_all --seed 42                # models/
 python -m ml.eval_extraction                    # models/extraction_eval.json
 python -m ml.evaluate --months 11-12 --seeds 42,43,44,45,46
+python -m ml.review_evaluate               # additive expert/age study; shipped models unchanged
+python -m ml.cash_review                   # additive 4-week receipt-policy comparison
 ```
 
 ## Deploy

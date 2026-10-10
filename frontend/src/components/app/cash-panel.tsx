@@ -8,6 +8,7 @@ import { day, dayFull, pct, rs, rsShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CashPanel as Panel, RunDetail } from "@/lib/types";
 import { LINE_CURSOR, TOOLTIP } from "@/components/app/chart-style";
+import { CashValidationNote, UnconfirmedCollections } from "@/components/app/cash-validation-note";
 
 function Outcome({ title, sub, c, reserve, good }: { title: string; sub: string; c: Panel["with_nigraan"]; reserve: number; good: boolean }) {
   const ok = c.stays_above_reserve;
@@ -58,6 +59,7 @@ export function CashPanel({ run }: { run: RunDetail }) {
         </div>
         <div className="text-xs text-muted-foreground">Reserve <span className="tabular font-semibold text-foreground">{rs(c.reserve)}</span></div>
       </div>
+      <div className="grid gap-3 border-b border-border px-5 py-3"><CashValidationNote validation={c.validation} compact /><UnconfirmedCollections policy={c.collection_policy} compact /></div>
       <div className="grid gap-5 p-5 xl:grid-cols-[210px_1fr_1.1fr]">
         <div className="grid content-start gap-3">
           <div>
@@ -81,7 +83,7 @@ export function CashPanel({ run }: { run: RunDetail }) {
           </div>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row xl:col-span-1 xl:flex-col">
-          <Outcome title="With Nigraan" sub="Red lines blocked, green + yellow released" c={c.with_nigraan} reserve={c.reserve} good />
+          <Outcome title="With Nigraan" sub="Assuming eligible green + yellow lines are paid" c={c.with_nigraan} reserve={c.reserve} good />
           <Outcome title="If every line were released" sub="No fraud firewall" c={c.release_everything} reserve={c.reserve} good={false} />
         </div>
         <div className="min-h-[220px] rounded-xl bg-muted/35 p-3">
@@ -110,7 +112,7 @@ export function CashPanel({ run }: { run: RunDetail }) {
             {c.responsible_receivables.map((r) => (
               <div key={r.receivable_id} className="rounded-md border border-border bg-card px-3 py-2 text-xs">
                 <div className="flex justify-between gap-2"><span className="truncate font-medium">{r.customer}</span><span className="tabular font-semibold">{rs(r.amount)}</span></div>
-                <div className="mt-0.5 text-muted-foreground">Due {day(r.due_date)} · expected {day(r.expected_date)} · late risk {r.limited_history ? "n/a (limited history)" : pct(r.risk)}</div>
+                <div className="mt-0.5 text-muted-foreground">Due {day(r.due_date)} · {r.expected_date ? `expected ${day(r.expected_date)}` : "collection unconfirmed, excluded"} · late risk {r.limited_history ? "n/a (limited history)" : pct(r.risk)}</div>
               </div>
             ))}
           </div>

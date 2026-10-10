@@ -97,3 +97,27 @@ test("cash chart selects the clicked week and keeps negative balances signed", a
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Week 2, day by day" })).toBeVisible();
 });
+
+test("dashboard recovers from errors and renders the measured review study", async ({ page }) => {
+  await signIn(page);
+  let unavailable = true;
+  await page.route("**/api/v1/dashboard/summary", async (route) => {
+    if (unavailable) await route.fulfill({ status: 503, json: { code: "unavailable", message: "Evaluation service temporarily unavailable." } });
+    else await route.continue();
+  });
+  await page.goto("/dashboard");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Evaluation service temporarily unavailable.");
+  unavailable = false;
+  const summary = page.waitForResponse((response) => response.url().endsWith("/dashboard/summary") && response.ok());
+  await page.getByRole("button", { name: "Retry dashboard", exact: true }).click();
+  const data = await (await summary).json();
+  const study = data.metrics.review;
+  expect(study.n_payments).toBe(data.metrics.fraud.n_payments);
+  const region = page.getByRole("region", { name: "Review evaluation" });
+  await expect(region.getByRole("heading", { name: "Expert rules comparison", exact: true })).toBeVisible();
+  const expert = region.getByRole("row", { name: /Expert rules/ });
+  await expect(expert).toContainText(`${(study.rules_comparison.expert.recall * 100).toFixed(1)}%`);
+  await expect(expert).toContainText(`${(study.rules_comparison.expert.false_alarm_rate * 100).toFixed(1)}%`);
+  await expect(region.getByRole("heading", { name: "Without the invoice-age feature", exact: true })).toBeVisible();
+  await expect(page.getByText("weekly receipt error for the current conservative policy", { exact: true })).toBeVisible();
+});

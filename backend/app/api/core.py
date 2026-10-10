@@ -17,6 +17,8 @@ from app.models import Case, Company, Invoice, Payment, PaymentRun, RiskScore, U
 from app.money import fmt_rs
 from app.schemas.requests import LinesIn, LoginIn, ResolveIn, RunIn, VendorIn, VendorPatch
 from app.services import cases as case_svc
+from app.services.scoring.scorer import FRAUD_TYPES
+from app.services.scoring.rules import comparison_for
 from app.services import payment_runs as runs
 from app.services.identity import hash_id, is_valid_pk_iban, last4, norm_address
 from app.services.payment_runs import audit, utcnow
@@ -250,11 +252,17 @@ def payment_score(payment_id: int, db: Session = Depends(get_db), user: User = D
     if s is None:
         _404("score")
     case = db.execute(select(Case).where(Case.payment_id == p.id).order_by(Case.id.desc())).scalars().first()
+    evidence = s.evidence_json or {}
+    comparison = evidence.get("rules_comparison")
+    if comparison is None:
+        comparison = comparison_for(runtime.scoring_context(db).features, p.id, evidence.get("features"),
+                                    evidence.get("rules"), (evidence.get("graph") or {}).get("signal"))
     return {"payment_id": p.id, "vendor": p.vendor.name, "invoice_no": p.invoice.invoice_no, "amount": int(p.amount),
             "score": s.score, "decision": s.decision, "reasons": s.reasons_json, "engines": s.engine_scores_json,
             "evidence": s.evidence_json, "trace": s.trace_json, "model_version": s.model_version,
             "scored_at": s.created_at.isoformat() + "Z", "case_id": case.id if case else None,
-            "invoice_source": p.invoice.source, "extraction": p.invoice.extraction_json}
+            "invoice_source": p.invoice.source, "extraction": p.invoice.extraction_json,
+            "rules_comparison": comparison}
 
 
 # ----------------------------------------------------------------------------- cases
@@ -277,6 +285,8 @@ def list_cases(status: str | None = Query(default=None, description="open | conf
     for c in rows:
         r = case_svc.case_row(c, users)
         s = scores.get(c.payment_id)
+        r["fraud_type"] = case_svc.suspected_case_type(c, s)
+        r["fraud_type_name"] = FRAUD_TYPES.get(r["fraud_type"], "Unusual payment")
         r["score"] = s.score if s else None
         r["top_reason"] = next((x["text"] for x in (s.reasons_json if s else []) if x.get("engine") != "info"), None)
         out.append(r)
@@ -292,7 +302,7 @@ def get_case(case_id: int, db: Session = Depends(get_db), user: User = Depends(c
 @router.post("/cases/{case_id}/resolve", tags=["cases"])
 def resolve_case(case_id: int, body: ResolveIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     c = db.get(Case, case_id) or _404("case")
-    return case_svc.resolve(db, c, user, body.outcome, body.note, body.block_vendor)
+    return case_svc.resolve(db, c, user, body.outcome, body.note, body.block_vendor, body.verification)
 
 
 @router.get("/cases/{case_id}/summary", tags=["cases"])

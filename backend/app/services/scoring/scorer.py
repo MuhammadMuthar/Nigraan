@@ -22,16 +22,45 @@ from app.services.scoring.risk import ModelBundle, iso_signal, xgb_predict
 
 FRAUD_TYPES = {
     "F1": "Duplicate invoice", "F2": "Bank-detail change", "F3": "Shell vendor", "F4": "Inflated price",
-    "F5": "Split payment", "F7": "Out-of-hours self-approval", "ANOMALY": "Unusual payment",
+    "F5": "Split payment", "F7": "Out-of-hours payment", "ANOMALY": "Unusual payment",
 }
 FEATURE_TYPE = {
     "days_since_bank_change": "F2", "account_changed": "F2", "first_payment_to_account": "F2",
     "changer_prior_edits": "F2", "changer_edit_share": "F2", "change_unverified": "F2",
     "unit_price_vs_median_max": "F4", "unit_price_vs_vendor_last": "F4", "same_payee_48h": "F5", "same_payee_48h_vs_limit": "F5", "limit_gap": "F5",
-    "is_night": "F7", "off_day": "F7", "creator_can_approve": "F7", "entry_hour": "F7", "days_since_invoice_date": "F7",
+    "is_night": "F7", "off_day": "F7", "entry_hour": "F7",
     "vague_line_share": "F3", "is_round_amount": "F3", "vendor_round_share": "F3", "no_sales_tax": "F3",
     "vendor_age_days": "F3", "vendor_prior_invoices": "F3",
 }
+
+
+def suspected_type(reasons: list[dict], decision: str, features: dict | None = None) -> str | None:
+    """Name the evidence shown to the reviewer, rather than unseen SHAP drivers.
+
+    A short invoice-to-payment interval or an approver's role alone does not establish
+    an out-of-hours pattern. Bank-account age alone may describe onboarding, not a change.
+    The UI calls this a *suspected* pattern; it is never a confirmed fraud label.
+    """
+    if decision == "allow":
+        return None
+    features = features or {}
+    shown = [r for r in reasons if r.get("engine") != "info" and not r.get("weak")][:4]
+    for reason in shown:
+        if reason.get("code") == "DUP_EXACT" or reason.get("engine") == "duplicate":
+            return "F1"
+        if reason.get("code") == "SPLIT_PAYMENT":
+            return "F5"
+        if reason.get("engine") == "graph":
+            return "F3"
+        feature = reason.get("feature")
+        kind = FEATURE_TYPE.get(feature)
+        if kind == "F2" and feature in ("days_since_bank_change", "first_payment_to_account",
+                                       "changer_prior_edits", "changer_edit_share"):
+            if not features.get("account_changed"):
+                continue
+        if kind:
+            return kind
+    return "ANOMALY"
 
 
 @dataclass
@@ -129,7 +158,7 @@ class Scorer:
 
         t0 = time.perf_counter()
         gr = ctx.graph.links_for(int(p["vendor_id"]), t_pay.value)
-        trace.append({"step": "graph", "label": "Relationship graph (vendors, employees, banks, phones, addresses)",
+        trace.append({"step": "graph", "label": "Deterministic relationship checks (vendors, employees, banks, phones, addresses)",
                       "ms": round((time.perf_counter() - t0) * 1000, 1),
                       "detail": gr.links[0]["text"] if gr.links else "no shared identifiers"})
 
@@ -182,22 +211,7 @@ class Scorer:
         for r in rr.info:
             reasons.append({"engine": "info", "weight": 0.0, "text": r, "priority": 9})
 
-        # ---- suspected pattern: explicit evidence first, then the model's strongest feature family
-        ftype = None
-        if decision != "allow":
-            if any(h.code == "DUP_EXACT" for h in rr.hits) or dup.prob >= 0.5:
-                ftype = "F1"
-            elif any(h.code == "SPLIT_PAYMENT" for h in rr.hits):
-                ftype = "F5"
-            elif gr.signal >= 0.7:
-                ftype = "F3"
-            else:  # family of the model's top-3 drivers
-                agg: dict[str, float] = {}
-                for name, c in sorted(contribs.items(), key=lambda kv: -kv[1])[:3]:
-                    t = FEATURE_TYPE.get(name)
-                    if t and c > 0:
-                        agg[t] = agg.get(t, 0) + c
-                ftype = max(agg, key=agg.get) if agg else "ANOMALY"
+        ftype = suspected_type(reasons, decision, feats)
 
         acc = ctx.ledger.accounts
         vid = int(p["vendor_id"])
@@ -226,6 +240,7 @@ class Scorer:
             "anomaly": {"signal": round(a_iso, 3)},
             "features": {k: (None if v is None or (isinstance(v, float) and np.isnan(v)) else round(float(v), 3))
                          for k, v in feats.items()},
+            "rules_comparison": R.comparison_for(ctx.features, pid, feats, rr.hits, gr.signal),
         }
         return ScoreResult(pid, score, decision, raw, {k: round(float(v), 4) for k, v in signals.items()},
                            {k: round(float(v), 4) for k, v in contributions.items()}, reasons, evidence, trace,

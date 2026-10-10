@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.models import AiCache, Case, RiskScore
 from app.money import fmt_rs
-from app.services.cases import verification_step
+from app.services.cases import suspected_case_type, verification_step
 from app.services.docreader import gemini
 from app.services.scoring.scorer import FRAUD_TYPES
 
@@ -37,7 +37,7 @@ def _evidence(case: Case, s: RiskScore) -> dict:
     out = {
         "vendor": p.vendor.name, "amount": fmt_rs(int(p.amount)), "invoice_no": p.invoice.invoice_no,
         "decision": {"allow": "allowed", "review": "needs review", "blocked": "blocked"}[s.decision],
-        "suspected_pattern": FRAUD_TYPES.get(case.fraud_type or "", "unusual payment"),
+        "suspected_pattern": FRAUD_TYPES.get(suspected_case_type(case, s) or "", "Unusual payment"),
         "reasons": [r["text"] for r in (s.reasons_json or []) if r.get("engine") != "info"][:5],
         "suggested_verification": verification_step(case, s),
     }

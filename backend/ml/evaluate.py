@@ -120,7 +120,8 @@ def late_eval(world, shipped: dict | None, lo: int, hi: int) -> dict:
     return out
 
 
-def cash_eval(world, lo: int, hi: int, horizon_weeks: int = 4) -> dict:
+def cash_eval(world, lo: int, hi: int, horizon_weeks: int = 4, *,
+              stale_policy: str = "legacy_next_week") -> dict:
     """Rolling-origin backtest of projected receipts (open receivables only) vs actual collections."""
     r = pd.DataFrame(world.receivables)
     truth = pd.DataFrame(world.receivable_truth).set_index("receivable_id")
@@ -142,10 +143,12 @@ def cash_eval(world, lo: int, hi: int, horizon_weeks: int = 4) -> dict:
         known = full.copy()
         known.loc[pd.to_datetime(known["paid_date"]) >= pd.Timestamp(o), ["paid_date"]] = None  # as seen at origin
         for method in errs:
-            est = estimate_receipts(known, o, method=method)
+            est = estimate_receipts(known, o, method=method, stale_policy=stale_policy)
             ids = {e.receivable_id for e in est}
             pred = np.zeros(horizon_weeks, dtype=np.int64)
             for e in est:
+                if e.expected_date is None:
+                    continue
                 k = (e.expected_date - o).days // 7
                 if 0 <= k < horizon_weeks:
                     pred[k] += e.amount
@@ -153,7 +156,8 @@ def cash_eval(world, lo: int, hi: int, horizon_weeks: int = 4) -> dict:
             errs[method].append(np.abs(pred - act))
             if method == "median_delay":
                 actual_tot += int(act.sum())
-    res = {"origins": [o.isoformat() for o in origins], "horizon_weeks": horizon_weeks}
+    res = {"origins": [o.isoformat() for o in origins], "horizon_weeks": horizon_weeks,
+           "receipt_policy": stale_policy}
     for m, e in errs.items():
         arr = np.array(e)
         res[m] = {"mae_rupees_per_week": float(arr.mean() / 100), "wape": float(arr.sum() / max(1, actual_tot)),

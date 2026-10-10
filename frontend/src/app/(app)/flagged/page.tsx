@@ -12,6 +12,7 @@ import type { RunDetail, RunLine } from "@/lib/types";
 import { flaggedOpen, PageTitle } from "@/components/app/shell";
 import { DecisionBadge, ENGINE_LABEL, FRAUD_NAMES, ScoreBar } from "@/components/app/decision";
 import { LineSheet } from "@/components/app/line-sheet";
+import { LineRuleChecks } from "@/components/app/rules-comparison";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -56,6 +57,7 @@ function FlaggedInvoices() {
   const [busy, setBusy] = useState<string | null>(null);
   const run = data?.run ?? null;
   const canApprove = user?.role === "approver" || user?.role === "owner";
+  const isOwner = user?.role === "owner";
 
   const lines = useMemo(() => {
     if (!run) return [];
@@ -86,7 +88,7 @@ function FlaggedInvoices() {
       <>
         <PageTitle title="Flagged invoices" sub="Every payment line Nigraan blocked or sent for a second approval, with the evidence behind each verdict." />
         <Empty icon={<CalendarPlus />} title="No payment run this week yet">
-          Use <b>Load demo week</b> in the demo bar above. Nigraan scores all 40 invoices in about a second and lists the risky ones here.
+          Use <b>Load demo week</b> in the demo bar above. Nigraan scores all 40 invoices and lists the flagged ones here.
         </Empty>
       </>
     );
@@ -107,9 +109,10 @@ function FlaggedInvoices() {
           value={<CountUp value={run.totals.blocked.count} />} sub={rs(run.totals.blocked.amount)} />
         <FilterCard active={filter === "review"} onClick={() => setFilter("review")} tone="review" label="Review · needs a second approver"
           value={<CountUp value={run.totals.review.count} />} sub={rs(run.totals.review.amount)} />
-        <FilterCard active={filter === "allow"} onClick={() => setFilter("allow")} tone="allow" label="Allow · cleared by every engine"
+        <FilterCard active={filter === "allow"} onClick={() => setFilter("allow")} tone="allow" label="Allow · below the review threshold"
           value={<CountUp value={run.totals.allow.count} />} sub={rs(run.totals.allow.amount)} />
       </section>
+      <p className="mb-4 text-xs leading-relaxed text-muted-foreground">{run.approval_policy} The person who clears a blocked case cannot approve that payment.</p>
 
       <Card className="animate-rise-in overflow-hidden [animation-delay:150ms]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -153,7 +156,9 @@ function FlaggedInvoices() {
                 <TD className="tabular whitespace-nowrap text-right font-medium">{rs(l.amount)}</TD>
                 <TD className="min-w-56 max-w-[360px]">
                   <div className={cn("line-clamp-2 text-sm", l.decision === "allow" && "text-muted-foreground")}>{l.top_reason}</div>
+                  <LineRuleChecks comparison={l.rules_comparison} />
                   {l.info.length > 0 && <div className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{l.info[0]}</div>}
+                  {l.requires_owner_approval && l.status === "pending" && <div className="mt-1 text-[11px] font-medium text-review">Owner approval · vendor total {rs(l.vendor_commitment_amount)}</div>}
                 </TD>
                 <TD className="text-xs"><div className="whitespace-nowrap">{l.created_by}</div><div className="whitespace-nowrap text-muted-foreground">{dateTime(l.created_at)}</div></TD>
                 <TD className="text-xs">
@@ -161,7 +166,7 @@ function FlaggedInvoices() {
                   {l.approved_by && <div className="text-muted-foreground">by {l.approved_by}</div>}
                 </TD>
                 <TD className="text-right" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                  <LineAction line={l} canApprove={canApprove} busy={busy} onApprove={() => act("approve", [l.id])} onReview={() => setReview(l)} />
+                  <LineAction line={l} userId={user?.id} canApprove={canApprove} isOwner={isOwner} busy={busy} onApprove={() => act("approve", [l.id])} onReview={() => setReview(l)} />
                 </TD>
               </TR>
             ))}
@@ -170,13 +175,13 @@ function FlaggedInvoices() {
         {lines.length === 0 && (
           <div className="flex animate-fade-in flex-col items-center gap-2 p-10 text-center text-sm text-muted-foreground">
             {query ? <>No lines match “{query}”. <button type="button" className="text-accent hover:underline" onClick={() => setQuery("")}>Clear search</button></>
-              : filter === "flagged" ? <><CircleCheck className="size-6 text-allow" />Nothing flagged in this run. Every line was cleared by the engines.</>
+              : filter === "flagged" ? <><CircleCheck className="size-6 text-allow" />No payment line currently needs a risk review. Approval controls still apply.</>
                 : "No lines match this verdict. Choose another filter."}
           </div>
         )}
       </Card>
 
-      <ReviewDialog line={review} userId={user?.id} canApprove={canApprove} busy={!!busy}
+      <ReviewDialog line={review} userId={user?.id} canApprove={canApprove} isOwner={isOwner} approvalLimit={run.approval_limit} busy={!!busy}
         onClose={() => setReview(null)} onApprove={(note) => review && act("approve", [review.id], note)} onHold={(note) => review && act("hold", [review.id], note)} />
       <LineSheet paymentId={sheet} onClose={() => setSheet(null)} />
     </>
@@ -195,8 +200,8 @@ function FilterCard({ active, onClick, tone, label, value, sub }: { active: bool
   );
 }
 
-function LineAction({ line: l, canApprove, busy, onApprove, onReview }: {
-  line: RunLine; canApprove: boolean; busy: string | null; onApprove: () => void; onReview: () => void;
+function LineAction({ line: l, userId, canApprove, isOwner, busy, onApprove, onReview }: {
+  line: RunLine; userId?: number; canApprove: boolean; isOwner: boolean; busy: string | null; onApprove: () => void; onReview: () => void;
 }) {
   if (l.decision === "blocked" && l.status === "blocked") {
     return (
@@ -214,25 +219,30 @@ function LineAction({ line: l, canApprove, busy, onApprove, onReview }: {
   if (l.decision === "review") {
     return <Button size="sm" variant="outline" className="border-review/40 text-review hover:bg-review-soft" onClick={onReview}><UserCheck />Second approval</Button>;
   }
+  const restriction = !canApprove ? "Approver or owner role needed"
+    : l.override_by_id === userId ? "Another person must approve this payment after you cleared its case"
+      : l.requires_owner_approval && !isOwner ? `Owner approval needed: combined vendor commitment ${rs(l.vendor_commitment_amount)}` : null;
   return (
-    <Tooltip content={canApprove ? "Approve this line" : "Approver or owner role needed"}>
-      <span><Button size="sm" variant="outline" disabled={!canApprove || !!busy} onClick={onApprove}>{busy === `approve${l.id}` ? <Loader2 className="animate-spin" /> : <CircleCheck />}Approve</Button></span>
+    <Tooltip content={restriction ?? "Approve this line"}>
+      <span><Button size="sm" variant="outline" disabled={!!restriction || !!busy} onClick={onApprove}>{busy === `approve${l.id}` ? <Loader2 className="animate-spin" /> : <CircleCheck />}Approve</Button></span>
     </Tooltip>
   );
 }
 
-function ReviewDialog({ line, userId, canApprove, busy, onClose, onApprove, onHold }: {
-  line: RunLine | null; userId?: number; canApprove: boolean; busy: boolean; onClose: () => void; onApprove: (note: string) => void; onHold: (note: string) => void;
+function ReviewDialog({ line, userId, canApprove, isOwner, approvalLimit, busy, onClose, onApprove, onHold }: {
+  line: RunLine | null; userId?: number; canApprove: boolean; isOwner: boolean; approvalLimit: number; busy: boolean; onClose: () => void; onApprove: (note: string) => void; onHold: (note: string) => void;
 }) {
   const [note, setNote] = useState("");
   const own = line && line.created_by_id === userId;
+  const clearedBySelf = line && line.override_by_id === userId;
+  const ownerRequired = line && line.requires_owner_approval && !isOwner;
   return (
     <Dialog open={!!line} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         {line && (
           <>
             <DialogTitle>Second approval: {line.vendor}</DialogTitle>
-            <DialogDescription>{rs(line.amount)} · invoice {line.invoice_no} · entered by {line.created_by}. Yellow lines need a second person who did not enter them.</DialogDescription>
+            <DialogDescription>{rs(line.amount)} · invoice {line.invoice_no} · entered by {line.created_by}. Approval must come from a different person to the line&apos;s creator and its case clearer.</DialogDescription>
             <div className="mt-4 grid gap-1.5">
               {line.reasons.map((r, i) => (
                 <div key={i} className="flex gap-2 text-sm"><Badge variant="review" className="mt-0.5 shrink-0">{ENGINE_LABEL[r.engine] ?? r.engine}</Badge>{r.text}</div>
@@ -240,11 +250,13 @@ function ReviewDialog({ line, userId, canApprove, busy, onClose, onApprove, onHo
               {line.info.map((t, i) => <div key={`i${i}`} className="text-xs text-muted-foreground">{t}</div>)}
             </div>
             {own && <div className="mt-4 rounded-md bg-review-soft px-3 py-2 text-sm text-review">You entered this line, so you cannot approve it. Ask another approver or the owner.</div>}
+            {clearedBySelf && <div className="mt-4 rounded-md bg-review-soft px-3 py-2 text-sm text-review">You cleared this case. A different approver or the owner must approve the payment.</div>}
+            {ownerRequired && <div className="mt-4 rounded-md bg-review-soft px-3 py-2 text-sm text-review">This vendor&apos;s combined run commitment is {rs(line.vendor_commitment_amount)}, above the {rs(approvalLimit)} limit. Ask the owner to approve.</div>}
             {!canApprove && <div className="mt-4 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">Only an approver or the owner can release payments.</div>}
             <Textarea aria-label="Second approval note" className="mt-4" placeholder="Note (e.g. called vendor on registered number, confirmed new account)" value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="outline" disabled={busy || !canApprove} onClick={() => onHold(note)}><PauseCircle />Hold</Button>
-              <Button variant="success" disabled={busy || !!own || !canApprove} onClick={() => onApprove(note)}><UserCheck />Approve as second approver</Button>
+              <Button variant="success" disabled={busy || !!own || !!clearedBySelf || !!ownerRequired || !canApprove} onClick={() => onApprove(note)}><UserCheck />Approve as second approver</Button>
             </div>
           </>
         )}

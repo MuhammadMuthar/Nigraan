@@ -24,19 +24,22 @@ from app.services.identity import norm_invoice_no
 from app.services.importer import import_csv
 from app.services.payment_runs import audit, claim_invoices, latest_decisions, score_payments, utcnow
 from app.services.runtime import runtime
-from app.services.scoring.scorer import FRAUD_TYPES
+from app.services.scoring.scorer import FRAUD_TYPES, suspected_type
 
 router = APIRouter()
 
 
 # ----------------------------------------------------------------------------- invoices
 @router.post("/invoices/upload", tags=["invoices"])
-async def upload_invoice(file: UploadFile = File(...), db: Session = Depends(get_db),
-                         user: User = Depends(require_roles("accountant", "approver", "owner"))):
+def upload_invoice(file: UploadFile = File(...), db: Session = Depends(get_db),
+                   user: User = Depends(require_roles("accountant", "approver", "owner"))):
     from app.services.docreader.pipeline import read_and_store
 
-    data = await file.read()
-    if len(data) > 8 * 1024 * 1024:
+    # Extraction uses synchronous HTTP, OCR and database calls. A synchronous route
+    # keeps that work in FastAPI's worker pool so other requests remain responsive.
+    max_bytes = 8 * 1024 * 1024
+    data = file.file.read(max_bytes + 1)
+    if len(data) > max_bytes:
         raise ApiError(413, "too_large", "File is larger than 8 MB", "file")
     return read_and_store(db, user, file.filename or "upload.pdf", file.content_type or "", data)
 
@@ -161,6 +164,7 @@ def score_invoice(invoice_id: int, db: Session = Depends(get_db),
     case = db.execute(select(Case).where(Case.payment_id == p.id).order_by(Case.id.desc())).scalars().first()
     return {"invoice_id": inv.id, "payment_id": p.id, "run_id": p.run_id, "score": s.score, "decision": s.decision,
             "reasons": s.reasons_json, "trace": s.trace_json, "engines": s.engine_scores_json,
+            "rules_comparison": (s.evidence_json or {}).get("rules_comparison"),
             "case_id": case.id if case else None, "model_version": s.model_version}
 
 
@@ -209,7 +213,8 @@ def receivables(status: str = Query("open", description="open | paid | all"), ri
             "paid_date": None if is_open else str(x.paid_date),
             "delay_days": None if is_open else (date.fromisoformat(str(x.paid_date)) - date.fromisoformat(str(x.due_date))).days,
             "risk": rk.get("risk"), "limited_history": rk.get("limited_history", False), "reasons": rk.get("reasons", []),
-            "expected_date": e.expected_date.isoformat() if e else None, "expected_basis": e.basis if e else None,
+            "expected_date": e.expected_date.isoformat() if e and e.expected_date is not None else None,
+            "included_in_base": e.included_in_base if e else False, "expected_basis": e.basis if e else None,
             "overdue_days": e.overdue_days if e else None, "disputed_amount": int(x.disputed_amount or 0),
             "expected_note": e.note if e else None,
         }
@@ -268,11 +273,11 @@ def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user))
     for p in live:
         s = scores.get(p.id)
         if s and s.decision != "allow":
-            t = (s.engine_scores_json or {}).get("fraud_type") or "ANOMALY"
+            t = suspected_type(s.reasons_json or [], s.decision, (s.evidence_json or {}).get("features")) or "ANOMALY"
             d = by_type.setdefault(t, {"type": t, "name": FRAUD_TYPES.get(t, t), "count": 0, "amount": 0, "red": 0})
             d["count"] += 1
             d["amount"] += int(p.amount)
-            d["red"] += int(s.decision == "blocked")
+            d["red"] += int(p.status == "blocked")
     hist = db.execute(select(Case.fraud_type, func.count(Case.id), func.sum(Case.amount))
                       .where(Case.source == "historical").group_by(Case.fraud_type)).all()
     open_cases = db.execute(select(func.count(Case.id), func.coalesce(func.sum(Case.amount), 0)).where(Case.status == "open")).one()
@@ -282,12 +287,14 @@ def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user))
     if run is not None:
         panel = cash_svc.run_cash_panel(db, run)
         cash = {"run_id": run.id, **panel["with_nigraan"], "reserve": panel["reserve"],
-                "release_everything": panel["release_everything"]}
+                "release_everything": panel["release_everything"],
+                "collection_policy": panel["collection_policy"], "validation": panel["validation"]}
     else:
         o = cash_svc.outlook(db, None)
         p = o["projection"]
         cash = {"run_id": None, "low_point": p["low_point"], "low_point_day": p["low_point_day"],
-                "first_breach": p["first_breach"], "reserve": p["reserve"], "stays_above_reserve": p["first_breach"] is None}
+                "first_breach": p["first_breach"], "reserve": p["reserve"], "stays_above_reserve": p["first_breach"] is None,
+                "collection_policy": o["collection_policy"], "validation": o["validation"]}
     metrics = _metrics()
     lines = run_lines = None
     if run is not None:
@@ -303,14 +310,23 @@ def dashboard(db: Session = Depends(get_db), user: User = Depends(current_user))
         "alerts_by_type": sorted(by_type.values(), key=lambda d: -d["amount"]),
         "historical_confirmed": [{"type": t, "name": FRAUD_TYPES.get(t or "", t), "count": int(n), "amount": int(a or 0)}
                                  for t, n, a in hist],
-        "cash": cash, "run": run_lines, "model_version": runtime.bundle.version, "metrics": _metric_cards(metrics),
+        "cash": cash, "cash_validation": cash_svc.validation_metadata(), "run": run_lines,
+        "model_version": runtime.bundle.version, "metrics": _metric_cards(metrics),
         "lines": lines,
     }
 
 
 def _metrics() -> dict:
+    from app.services.scoring.review import load_review_evaluation
+
     p = get_settings().models_dir / "metrics.json"
-    return json.loads(p.read_text()) if p.exists() else {}
+    metrics = json.loads(p.read_text()) if p.exists() else {}
+    review = load_review_evaluation(get_settings().models_dir, runtime.bundle.version)
+    if metrics and review is not None:
+        metrics["review"] = review
+    if metrics:
+        metrics["cash_validation"] = cash_svc.validation_metadata()
+    return metrics
 
 
 def _metric_cards(m: dict) -> dict | None:
@@ -321,6 +337,7 @@ def _metric_cards(m: dict) -> dict | None:
     c = m["cash"]
     out = {
         "test_period": m.get("test_period"), "generated_at": m.get("generated_at"),
+        "model_version": m.get("model_version"),
         "fraud": {"n_payments": f["n_payments"], "n_fraud": f["n_fraud"], "nigraan": {k: f["nigraan"][k] for k in (
             "recall", "precision_red", "false_alarm_rate", "pr_auc", "rupees_protected_red", "rupees_fraud")},
                   "baseline": {k: f["baseline_rules_only"][k] for k in ("recall", "precision_red", "false_alarm_rate", "pr_auc")},
@@ -336,6 +353,10 @@ def _metric_cards(m: dict) -> dict | None:
         out["robustness"] = m["robustness"]["aggregate"]
     if "extraction" in m:
         out["extraction"] = m["extraction"].get("summary")
+    if "review" in m:
+        out["review"] = m["review"]
+    if "cash_validation" in m:
+        out["cash_validation"] = m["cash_validation"]
     return out
 
 
@@ -400,7 +421,7 @@ def _demo_only():
 
 
 @router.post("/demo/reset", tags=["demo"])
-def demo_reset(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def demo_reset(user: User = Depends(require_roles("owner")), db: Session = Depends(get_db)):
     _demo_only()
     db.close()
     from app.services.demo import reset

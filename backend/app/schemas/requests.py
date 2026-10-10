@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 from typing import Annotated
+from typing import Literal
 
 from pydantic import AfterValidator, BaseModel, Field
 
@@ -89,10 +90,18 @@ class LinesIn(BaseModel):
     note: str | None = None
 
 
+class VerificationIn(BaseModel):
+    result: Literal["verified_legitimate", "confirmed_issue"]
+    method: Literal["registered_phone", "documents", "in_person", "requester_review"]
+    checks: list[str] = Field(max_length=12)
+    reference: str = Field(max_length=1000, description="Contact, document or record used to verify the case")
+
+
 class ResolveIn(BaseModel):
     outcome: str = Field(description="confirmed_fraud | false_alarm")
     note: str | None = None
     block_vendor: bool = False
+    verification: VerificationIn | None = None
 
 
 class MoveIn(BaseModel):

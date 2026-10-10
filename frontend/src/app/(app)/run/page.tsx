@@ -11,6 +11,7 @@ import type { RunDetail } from "@/lib/types";
 import { flaggedOpen, PageTitle } from "@/components/app/shell";
 import { CashPanel } from "@/components/app/cash-panel";
 import { DecisionBadge, FRAUD_NAMES } from "@/components/app/decision";
+import { RulesComparisonSummary } from "@/components/app/rules-comparison";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CountUp, Empty, Skeleton, Stat } from "@/components/ui/misc";
@@ -30,8 +31,9 @@ export default function RunPage() {
     setBusy("green");
     try {
       const r = await api.post<{ approved: number[]; skipped: { vendor: string; reason: string }[] }>(`/payment-runs/${run.id}/approve-green`);
-      toast.success(`Approved ${r.approved.length} green line(s).`);
-      if (r.skipped.length) toast.warning(`${r.skipped.length} green line(s) are above the approval limit and need the owner: ${r.skipped.map((s) => s.vendor).join(", ")}`);
+      if (r.approved.length) toast.success(`Approved ${r.approved.length} green line(s).`);
+      else if (!r.skipped.length) toast.message("No eligible green lines remain to approve.");
+      if (r.skipped.length) toast.warning(`${r.skipped.length} line(s) still need approval: ${r.skipped.map((s) => `${s.vendor}: ${s.reason}`).join("; ")}`);
       await reload();
     } catch (e) {
       toast.error((e as Error).message);
@@ -72,7 +74,7 @@ export default function RunPage() {
       <>
         <PageTitle title="Payment run" sub="Before the owner releases payments, every line gets a verdict and the cash impact is shown." />
         <Empty icon={<CalendarPlus />} title="No payment run this week yet">
-          Use <b>Load demo week</b> in the demo bar above to import this week&apos;s 40 vendor invoices. Nigraan scores every line in about a second and shows whether cash stays above the reserve.
+          Use <b>Load demo week</b> in the demo bar above to import this week&apos;s 40 vendor invoices. Nigraan scores every line and shows whether cash stays above the reserve.
         </Empty>
       </>
     );
@@ -100,6 +102,7 @@ export default function RunPage() {
         </Tooltip>
       </PageTitle>
       <p className="mb-5 text-xs text-muted-foreground">Demo bank export contains account last four digits only. It does not send money or confirm settlement; exported payments remain forecast obligations.</p>
+      <p className="mb-5 text-xs text-muted-foreground">{run.approval_policy} The person who clears a blocked case cannot approve that payment.</p>
 
       <section aria-label="Payment run summary" className="stagger mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card><div className="p-5"><Stat label="Total payment lines" value={<CountUp value={run.lines.length} />} sub={`${rs(run.cash.run_total)} scheduled`} /></div></Card>
@@ -109,6 +112,7 @@ export default function RunPage() {
         <Card className="border-blocked/20"><div className="p-5"><Stat label="Blocked payment amount" value={<CountUp value={run.totals.blocked.amount} format={rs} />} sub="Resolve the cases before release" tone={run.totals.blocked.count ? "blocked" : undefined} /></div></Card>
         <Card><div className="p-5"><Stat label="13-week reserve outcome" value={run.cash.with_nigraan.stays_above_reserve ? "Above reserve" : "Reserve breach"} sub={run.cash.with_nigraan.first_breach ? `First breach ${dayFull(run.cash.with_nigraan.first_breach)}` : `Minimum cash ${rs(run.cash.with_nigraan.low_point)}`} tone={run.cash.with_nigraan.stays_above_reserve ? "allow" : "blocked"} /></div></Card>
       </section>
+      <RulesComparisonSummary comparison={run.rules_comparison} />
       <CashPanel run={run} />
       <AttentionCard run={run} />
     </>
@@ -132,7 +136,7 @@ function AttentionCard({ run }: { run: RunDetail }) {
         <Button asChild><Link href="/flagged">Review flagged invoices<ArrowRight /></Link></Button>
       </div>
       {flagged.length === 0 ? (
-        <div className="flex items-center gap-2 px-5 py-6 text-sm text-muted-foreground"><CircleCheck className="size-4 text-allow" />Every line in this run was cleared by the engines.</div>
+        <div className="flex items-center gap-2 px-5 py-6 text-sm text-muted-foreground"><CircleCheck className="size-4 text-allow" />No payment line currently needs a risk review. Approval controls still apply.</div>
       ) : (
         <ul className="divide-y divide-border">
           {flagged.slice(0, 5).map((l, i) => (

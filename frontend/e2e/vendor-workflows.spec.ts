@@ -84,8 +84,10 @@ test("vendor creation and bank changes require an independent approver", async (
 });
 
 test("unmatched uploads recover through vendor creation or existing-vendor selection", async ({ page }) => {
-  await signIn(page, "Sana Iqbal");
+  await signIn(page, "Haji Abdul Rashid");
   await resetAndLoad(page);
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signIn(page, "Sana Iqbal");
   await page.goto("/upload");
   const newName = "Unlisted Synthetic Zircon Document Supplier";
   await page.getByLabel("Invoice files", { exact: true }).setInputFiles({ name: "synthetic-unmatched.pdf", mimeType: "application/pdf", buffer: invoicePdf(newName, "WORKFLOW-900001") });

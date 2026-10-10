@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-10-10T15:59:10+00:00",
+  "seed": 42,
+  "synthetic": true,
+  "test_months": "11-12",
+  "inputs_sha256": "c69350af866498c2fe0652cab034cd44627a4613b4f16f624fca02d82cd64c62",
+  "scope": "Rolling-origin receipt backtest only; not a validation of thirteen-week balances or reserve outcomes.",
+  "policies": {
+    "legacy_next_week": {
+      "origins": [
+        "2026-08-03",
+        "2026-08-10",
+        "2026-08-17",
+        "2026-08-24",
+        "2026-08-31"
+      ],
+      "horizon_weeks": 4,
+      "receipt_policy": "legacy_next_week",
+      "median_delay": {
+        "mae_rupees_per_week": 3543992.5,
+        "wape": 0.3884151750535223,
+        "mae_by_horizon_week": [
+          2309254.0,
+          8252984.0,
+          2115664.0,
+          1498068.0
+        ]
+      },
+      "due_date": {
+        "mae_rupees_per_week": 6042685.0,
+        "wape": 0.662267358655046,
+        "mae_by_horizon_week": [
+          3381258.0,
+          16528152.0,
+          2316658.0,
+          1944672.0
+        ]
+      },
+      "improvement_vs_due_date": 0.4135069923386706
+    },
+    "exclude_unconfirmed": {
+      "origins": [
+        "2026-08-03",
+        "2026-08-10",
+        "2026-08-17",
+        "2026-08-24",
+        "2026-08-31"
+      ],
+      "horizon_weeks": 4,
+      "receipt_policy": "exclude_unconfirmed",
+      "median_delay": {
+        "mae_rupees_per_week": 2199658.5,
+        "wape": 0.24107859746753646,
+        "mae_by_horizon_week": [
+          2309254.0,
+          2875648.0,
+          2115664.0,
+          1498068.0
+        ]
+      },
+      "due_date": {
+        "mae_rupees_per_week": 2593299.5,
+        "wape": 0.28422093987465036,
+        "mae_by_horizon_week": [
+          3381258.0,
+          2730610.0,
+          2316658.0,
+          1944672.0
+        ]
+      },
+      "improvement_vs_due_date": 0.1517915690031174
+    }
+  }
+}

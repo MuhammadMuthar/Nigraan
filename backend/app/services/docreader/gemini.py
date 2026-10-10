@@ -1,4 +1,4 @@
-"""Gemini Flash extraction (server-side key only). Temperature 0, JSON schema output, 20 s timeout,
+"""Gemini Flash extraction (server-side key only). Temperature 0, JSON schema output, 8 s default timeout,
 one retry, cached by input hash so the demo repeats exactly."""
 from __future__ import annotations
 

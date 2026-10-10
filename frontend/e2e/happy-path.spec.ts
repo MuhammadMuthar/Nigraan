@@ -7,9 +7,14 @@ async function signIn(page: import("@playwright/test").Page, name: string) {
 }
 
 test("payment run: load week, red lines locked, case evidence, owner releases green and confirms fraud", async ({ page }) => {
-  await signIn(page, "Sana Iqbal");
+  await signIn(page, "Haji Abdul Rashid");
   await page.getByRole("button", { name: "Reset data" }).click();
   await expect(page.getByText("No payment run this week yet")).toBeVisible();
+
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await signIn(page, "Sana Iqbal");
+  await expect(page.getByRole("button", { name: "Reset data", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Only the owner can reset data", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Load demo week" }).click();
   await expect(page.getByText("Cash impact of this run")).toBeVisible();
@@ -41,6 +46,11 @@ test("payment run: load week, red lines locked, case evidence, owner releases gr
   await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Flagged invoices", exact: true }).click();
   await page.locator("tbody tr", { has: page.getByText("Blocked", { exact: true }) }).first().getByRole("link", { name: "View case" }).click();
   await page.getByRole("button", { name: "Confirm fraud" }).click();
+  const resolution = page.getByRole("dialog");
+  const requiredChecks = resolution.getByRole("group", { name: "Required verification checks" }).getByRole("checkbox");
+  for (const check of await requiredChecks.all()) await check.check();
+  await resolution.getByLabel("Verification method", { exact: true }).selectOption("documents");
+  await resolution.getByLabel("Evidence reference", { exact: true }).fill("Demo fixture: original invoice and delivery register reviewed.");
   await page.getByPlaceholder(/What did you verify/).fill("Called vendor on registered number; they never sent this invoice.");
   await page.getByRole("button", { name: "Save outcome" }).click();
   await expect(page.getByText("Confirmed fraud").first()).toBeVisible();
