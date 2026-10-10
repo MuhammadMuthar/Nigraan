@@ -13,8 +13,8 @@ export function AgentTrace({ steps, title = "Agent trace" }: { steps: TraceStep[
       </div>
       <ol className="relative ml-2 border-l border-border">
         {steps.map((s, i) => (
-          <li key={i} className="mb-3 ml-4">
-            <span className="absolute -left-[5px] mt-1.5 size-2.5 rounded-full border-2 border-card bg-accent" />
+          <li key={i} className="row-in relative mb-3 ml-4" style={{ "--i": i } as React.CSSProperties}>
+            <span className="absolute -left-[21px] mt-1.5 size-2.5 rounded-full border-2 border-card bg-accent" />
             <div className="flex items-baseline justify-between gap-3">
               <div className="text-sm font-medium">{s.label}</div>
               <div className="tabular shrink-0 text-xs text-muted-foreground">{s.ms < 1 ? "<1" : s.ms.toFixed(0)} ms</div>

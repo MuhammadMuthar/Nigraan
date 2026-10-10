@@ -1,70 +1,38 @@
 "use client";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useResolvedTheme } from "@/lib/preferences";
+import { GRAPH_PALETTE, type GEdge, type GNode } from "@/components/app/graph-palette";
 
-const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
+const GraphCanvas = dynamic(() => import("@/components/app/graph-canvas"), {
+  ssr: false,
+  loading: () => <div className="skeleton-shimmer h-full min-h-60" />,
+});
 
-type GNode = { id: string; kind: string; label: string };
-type GEdge = { source: string; target: string };
-
-const COLORS: Record<string, string> = {
-  vendor: "#0f766e", employee: "#b91c1c", user: "#7c3aed", bank: "#52525b", phone: "#52525b", address: "#52525b", cnic: "#52525b",
-};
-const KIND_LABEL: Record<string, string> = { bank: "Bank", phone: "Phone", address: "Address", cnic: "CNIC" };
-
-/** Relationship graph around a vendor; the suspicious path is highlighted. */
+/** Relationship graph around a vendor; the suspicious path is highlighted and animated. */
 export function GraphView({ nodes, edges, path, height = 340 }: { nodes: GNode[]; edges: GEdge[]; path: string[]; height?: number }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(600);
-  useEffect(() => {
-    const el = wrap.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
-    ro.observe(el);
-    setWidth(el.clientWidth);
-    return () => ro.disconnect();
-  }, []);
-  const onPath = useMemo(() => new Set(path), [path]);
-  const data = useMemo(() => ({
-    nodes: nodes.map((n) => ({ ...n })),
-    links: edges.map((e) => ({ ...e, hot: onPath.has(e.source) && onPath.has(e.target) })),
-  }), [nodes, edges, onPath]);
-
+  const theme = useResolvedTheme();
+  const pal = GRAPH_PALETTE[theme];
   if (nodes.length === 0) return <div className="py-10 text-center text-sm text-muted-foreground">No shared identifiers found for this vendor.</div>;
+  const legend = [
+    { label: "Vendor", color: pal.vendor },
+    { label: "Employee", color: pal.employee },
+    { label: "User", color: pal.user },
+    { label: "Identifier (phone, bank, address)", color: pal.identifier },
+  ].filter((l) => l.label !== "User" || nodes.some((n) => n.kind === "user"));
   return (
-    <div ref={wrap} className="overflow-hidden rounded-md border border-border bg-[#fbfbfc]">
-      <ForceGraph2D
-        graphData={data}
-        width={width}
-        height={height}
-        cooldownTicks={80}
-        nodeRelSize={5}
-        linkColor={(l: object) => ((l as { hot?: boolean }).hot ? "#b91c1c" : "#d4d4d8")}
-        linkWidth={(l: object) => ((l as { hot?: boolean }).hot ? 2.5 : 1)}
-        nodeCanvasObject={(obj: object, ctx: CanvasRenderingContext2D, scale: number) => {
-          const node = obj as GNode & { x?: number; y?: number };
-          const hot = onPath.has(node.id);
-          const isEntity = ["vendor", "employee", "user"].includes(node.kind);
-          const r = isEntity ? 7 : 4.5;
-          ctx.beginPath();
-          ctx.arc(node.x ?? 0, node.y ?? 0, r, 0, 2 * Math.PI);
-          ctx.fillStyle = COLORS[node.kind] ?? "#71717a";
-          ctx.globalAlpha = hot || isEntity ? 1 : 0.55;
-          ctx.fill();
-          if (hot) {
-            ctx.lineWidth = 2 / scale;
-            ctx.strokeStyle = "#b91c1c";
-            ctx.stroke();
-          }
-          ctx.globalAlpha = 1;
-          const label = isEntity ? node.label : `${KIND_LABEL[node.kind] ?? node.kind}: ${node.label}`;
-          const fs = Math.max(10 / scale, 2.5);
-          ctx.font = `${hot ? "600 " : ""}${fs}px Inter, sans-serif`;
-          ctx.fillStyle = hot ? "#18181b" : "#52525b";
-          ctx.textAlign = "center";
-          ctx.fillText(label.length > 42 ? label.slice(0, 40) + "…" : label, node.x ?? 0, (node.y ?? 0) + r + fs + 1);
-        }}
-      />
+    <div>
+      <div
+        className="relative overflow-hidden rounded-xl border border-border bg-[var(--graph-bg)] [background-image:radial-gradient(var(--graph-dot)_1px,transparent_1px)] [background-size:18px_18px]"
+        style={{ height }}
+      >
+        {/* re-mount on theme change so the canvas repaints with the new palette */}
+        <GraphCanvas key={theme} nodes={nodes} edges={edges} path={path} height={height} theme={theme} />
+        <div className="pointer-events-none absolute left-3 top-2.5 text-[10px] text-muted-foreground">Drag nodes · scroll to zoom · hover for details</div>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+        {legend.map((l) => <span key={l.label} className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full" style={{ background: l.color }} />{l.label}</span>)}
+        {path.length > 0 && <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 rounded" style={{ background: pal.hot }} />Suspicious link</span>}
+      </div>
     </div>
   );
 }

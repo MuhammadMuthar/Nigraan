@@ -14,12 +14,14 @@ test("payment run: load week, red lines locked, case evidence, owner releases gr
   await page.getByRole("button", { name: "Load demo week" }).click();
   await expect(page.getByText("Cash impact of this run")).toBeVisible();
   await expect(page.getByText("If every line were released")).toBeVisible();
-
-  // red lines: Release is disabled and a case link exists
-  const blockedRow = page.locator("tbody tr", { has: page.getByText("Blocked", { exact: true }) }).first();
-  await expect(blockedRow.getByRole("button", { name: "Release" })).toBeDisabled();
   // accountant cannot approve
   await expect(page.getByRole("button", { name: /Approve all green/ })).toBeDisabled();
+
+  // the decisions table lives in its own tab: red lines are locked and a case link exists
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Flagged invoices", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Flagged invoices" })).toBeVisible();
+  const blockedRow = page.locator("tbody tr", { has: page.getByText("Blocked", { exact: true }) }).first();
+  await expect(blockedRow.getByRole("button", { name: "Release" })).toBeDisabled();
 
   // open the line drawer: agent trace is shown
   await blockedRow.click();
@@ -36,6 +38,7 @@ test("payment run: load week, red lines locked, case evidence, owner releases gr
   await page.getByRole("button", { name: /Approve all green/ }).click();
   await expect(page.getByText(/Approved \d+ green line/)).toBeVisible();
 
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Flagged invoices", exact: true }).click();
   await page.locator("tbody tr", { has: page.getByText("Blocked", { exact: true }) }).first().getByRole("link", { name: "View case" }).click();
   await page.getByRole("button", { name: "Confirm fraud" }).click();
   await page.getByPlaceholder(/What did you verify/).fill("Called vendor on registered number; they never sent this invoice.");

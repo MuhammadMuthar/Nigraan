@@ -1,8 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { useApi } from "@/lib/hooks";
 import { rs } from "@/lib/format";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +19,7 @@ export type ScoreDetail = {
 };
 
 export function LineSheet({ paymentId, onClose }: { paymentId: number | null; onClose: () => void }) {
-  const [res, setRes] = useState<ScoreDetail | null>(null);
-  useEffect(() => {
-    if (paymentId) api.get<ScoreDetail>(`/payments/${paymentId}/score`).then(setRes).catch(() => setRes(null));
-  }, [paymentId]);
+  const { data: res, error } = useApi<ScoreDetail>(paymentId ? `/payments/${paymentId}/score` : null);
   const d = res && res.payment_id === paymentId ? res : null;
   return (
     <Sheet open={paymentId !== null} onOpenChange={(o) => !o && onClose()}>
@@ -33,9 +29,10 @@ export function LineSheet({ paymentId, onClose }: { paymentId: number | null; on
           <SheetDescription>{d ? `Invoice ${d.invoice_no} · ${rs(d.amount)} · source: ${d.invoice_source}` : " "}</SheetDescription>
         </div>
         {!d ? (
-          <div className="flex items-center gap-2 p-5 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Fetching score, evidence and trace…</div>
+          error ? <div role="alert" className="p-5 text-sm text-blocked">{error.message}</div>
+            : <div className="flex items-center gap-2 p-5 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Fetching score, evidence and trace…</div>
         ) : (
-          <div className="grid gap-6 p-5">
+          <div key={d.payment_id} className="stagger grid gap-6 p-5">
             <div className="flex items-center gap-5">
               <ScoreGauge score={d.score} decision={d.decision} />
               <div className="grid gap-1.5">
@@ -51,7 +48,7 @@ export function LineSheet({ paymentId, onClose }: { paymentId: number | null; on
               <div className="mb-2 text-sm font-semibold">Why</div>
               <ul className="grid gap-1.5">
                 {d.reasons.map((r, i) => (
-                  <li key={i} className="flex gap-2 text-sm">
+                  <li key={i} className="row-in flex gap-2 text-sm" style={{ "--i": i } as React.CSSProperties}>
                     <Badge variant={r.engine === "info" ? "outline" : "accent"} className="mt-0.5 shrink-0">{ENGINE_LABEL[r.engine] ?? r.engine}</Badge>
                     <span className={r.weak ? "text-muted-foreground" : ""}>{r.text}</span>
                   </li>

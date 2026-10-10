@@ -46,11 +46,12 @@ export default function LoginPage() {
   return (
     <div className="grid min-h-screen lg:grid-cols-[1fr_1fr]">
       <section className="relative hidden flex-col justify-between overflow-hidden bg-[#0B1422] p-12 text-white lg:flex xl:p-16" aria-label="About Nigraan">
+        <span aria-hidden className="pointer-events-none absolute -right-24 top-1/3 size-96 rounded-full bg-teal-500/10 blur-3xl motion-safe:animate-pulse" />
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-[#0D9488]"><Eye aria-hidden className="size-6" /></div>
           <div className="text-2xl font-semibold tracking-tight">Nigraan <span className="ml-1 text-lg font-normal text-slate-400">نگران</span></div>
         </div>
-        <div className="max-w-lg py-12">
+        <div className="stagger max-w-lg py-12">
           <div className="mb-6 text-xs font-medium uppercase tracking-[0.2em] text-teal-300">Finance control tower / Pakistan</div>
           <h1 className="text-4xl font-semibold leading-[1.15] tracking-tight xl:text-5xl">Every rupee.<br />A clearer decision.</h1>
           <p className="mt-6 max-w-md text-base leading-relaxed text-slate-300">Check what goes out. See whether what comes in will cover it. Bring payment risk and cash visibility into one workspace.</p>
@@ -62,7 +63,7 @@ export default function LoginPage() {
         <div className="flex flex-wrap justify-between gap-2 border-t border-white/10 pt-5 text-xs text-slate-400"><span>AICON’26 · Financial Operations</span><span>Synthetic data only</span></div>
       </section>
       <main className="flex items-center justify-center px-5 py-10 sm:px-10">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md animate-rise-in">
           <div className="mb-8 flex items-center gap-2 text-lg font-semibold lg:hidden"><span className="flex size-9 items-center justify-center rounded-xl bg-[#0D9488] text-white"><Eye className="size-5" /></span>Nigraan <span className="text-muted-foreground">نگران</span></div>
           <div className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-accent">Welcome to your workspace</div>
           <h2 className="text-3xl font-semibold tracking-tight">Sign in to Nigraan</h2>
@@ -70,14 +71,14 @@ export default function LoginPage() {
           {demoUsers.length > 0 && (
             <section className="mt-7" aria-labelledby="demo-heading">
               <div className="mb-3 flex items-center justify-between"><h3 id="demo-heading" className="text-sm font-semibold">Choose a demo role</h3><span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">One-click access</span></div>
-              <div className="grid gap-2.5">
+              <div className="stagger grid gap-2.5">
                 {demoUsers.map((u) => (
                   <button key={u.id} type="button" disabled={busy}
                     onClick={() => { setEmail(u.email); setPassword("nigraan-demo"); submit(undefined, u.email, "nigraan-demo"); }}
-                    className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-[0_2px_6px_rgba(11,20,34,0.02)] transition-colors hover:border-accent/50 hover:bg-accent-soft/40 disabled:opacity-50">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">{u.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}</span>
+                    className="lift group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-[var(--shadow-card)] hover:border-accent/50 hover:bg-accent-soft/40 disabled:opacity-50">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground transition-colors group-hover:bg-accent-soft group-hover:text-accent">{u.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}</span>
                     <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{u.name} <span className="text-xs font-normal text-muted-foreground">· {ROLE_LABEL[u.role]}</span></span><span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{ROLE_HELP[u.role]}</span></span>
-                    <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground group-hover:text-accent" />
+                    <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-accent" />
                   </button>
                 ))}
               </div>

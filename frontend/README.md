@@ -11,11 +11,16 @@ npx playwright test  # happy-path e2e; starts the API and the built app if they 
 ```
 
 Screens:
-- `/run`: payment run with the cash panel
+- `/run`: payment run with the cash panel and a preview of what needs attention
+- `/flagged`: Flagged invoices, the payment decisions table (blocked / review / allow), search, second approval
 - `/cases`, `/cases/[id]`: case detail with evidence
 - `/upload`: document reader
 - `/cash`: 13-week outlook and scenarios
 - `/dashboard`
 - `/vendors`
+
+Display preferences live in the floating button (bottom-right by default; drag it anywhere): light, dark or system theme, animations on or off. If you hide it, bring it back with <kbd>Shift</kbd> + <kbd>P</kbd> or from the profile menu. Choices are stored in this browser only.
+
+API responses are cached per path and refreshed in the background, so revisiting a screen renders instantly; hovering a menu item prefetches that screen's data.
 
 See the root [README](../README.md).
