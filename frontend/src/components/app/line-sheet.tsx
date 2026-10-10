@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, CircleAlert, Loader2, RefreshCw } from "lucide-react";
-import { api } from "@/lib/api";
+import { useApi } from "@/lib/hooks";
 import { rs } from "@/lib/format";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -20,31 +20,15 @@ export type ScoreDetail = {
 };
 
 export function LineSheet({ paymentId, onClose }: { paymentId: number | null; onClose: () => void }) {
-  const [result, setResult] = useState<{ paymentId: number | null; data: ScoreDetail | null; error: string | null }>({ paymentId: null, data: null, error: null });
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    if (paymentId === null) return;
-    let active = true;
-    api.get<ScoreDetail>(`/payments/${paymentId}/score`).then(
-      (data) => { if (active) setResult({ paymentId, data, error: null }); },
-      (error: Error) => { if (active) setResult({ paymentId, data: null, error: error.message }); },
-    );
-    return () => { active = false; };
-  }, [paymentId, attempt]);
-  const current = result.paymentId === paymentId;
-  const d = current ? result.data : null;
-  const error = current ? result.error : null;
-  function retry() {
-    setResult({ paymentId: null, data: null, error: null });
-    setAttempt((value) => value + 1);
+  const { data: res, error, reload } = useApi<ScoreDetail>(paymentId !== null ? `/payments/${paymentId}/score` : null);
+  const [retrying, setRetrying] = useState(false);
+  const d = res && res.payment_id === paymentId ? res : null;
+  async function retry() {
+    setRetrying(true);
+    try { await reload(); } finally { setRetrying(false); }
   }
   return (
-    <Sheet open={paymentId !== null} onOpenChange={(open) => {
-      if (!open) {
-        setResult({ paymentId: null, data: null, error: null });
-        onClose();
-      }
-    }}>
+    <Sheet open={paymentId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent>
         <div className="border-b border-border p-5 pr-12">
           <SheetTitle>{d ? d.vendor : error ? "Invoice details unavailable" : "Loading…"}</SheetTitle>
@@ -52,13 +36,13 @@ export function LineSheet({ paymentId, onClose }: { paymentId: number | null; on
         </div>
         {error ? (
           <div className="grid gap-3 p-5" role="alert">
-            <div className="flex items-start gap-2 text-sm text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0" /><p>{error}</p></div>
-            <Button variant="outline" className="w-fit" onClick={retry}><RefreshCw />Retry invoice details</Button>
+            <div className="flex items-start gap-2 text-sm text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0" /><p>{error.message}</p></div>
+            <Button variant="outline" className="w-fit" onClick={retry} disabled={retrying}>{retrying ? <Loader2 className="animate-spin" /> : <RefreshCw />}Retry invoice details</Button>
           </div>
         ) : !d ? (
           <div className="flex items-center gap-2 p-5 text-sm text-muted-foreground" role="status"><Loader2 className="size-4 animate-spin" />Fetching score, evidence and trace…</div>
         ) : (
-          <div className="grid gap-6 p-5">
+          <div key={d.payment_id} className="stagger grid gap-6 p-5">
             <div className="flex items-center gap-5">
               <ScoreGauge score={d.score} decision={d.decision} />
               <div className="grid gap-1.5">
@@ -74,7 +58,7 @@ export function LineSheet({ paymentId, onClose }: { paymentId: number | null; on
               <div className="mb-2 text-sm font-semibold">Why</div>
               <ul className="grid gap-1.5">
                 {d.reasons.map((r, i) => (
-                  <li key={i} className="flex gap-2 text-sm">
+                  <li key={i} className="row-in flex gap-2 text-sm" style={{ "--i": i } as React.CSSProperties}>
                     <Badge variant={r.engine === "info" ? "outline" : "accent"} className="mt-0.5 shrink-0">{ENGINE_LABEL[r.engine] ?? r.engine}</Badge>
                     <span className={r.weak ? "text-muted-foreground" : ""}>{r.text}</span>
                   </li>

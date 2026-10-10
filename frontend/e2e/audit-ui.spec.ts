@@ -14,18 +14,21 @@ test("cases show a recoverable service error rather than an empty list", async (
     else await route.continue();
   });
   await page.goto("/cases");
-  await expect(page.getByRole("alert")).toContainText("Cases unavailable");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Cases unavailable");
   await expect(page.getByText("No cases here", { exact: true })).not.toBeVisible();
   unavailable = false;
   await page.getByRole("button", { name: "Retry cases" }).click();
-  await expect(page.getByRole("alert")).not.toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).not.toBeVisible();
   await expect(page.getByRole("button", { name: "Retry cases" })).not.toBeVisible();
 });
 
 test("invoice details recover from a failed fetch and ignore a closed request", async ({ page }) => {
   await signIn(page);
-  const load = page.getByRole("button", { name: "Load demo week", exact: true });
-  if (await load.isVisible()) await load.click();
+  await page.getByRole("button", { name: "Reset data", exact: true }).click();
+  await expect(page.getByText("No payment run this week yet")).toBeVisible();
+  await page.getByRole("button", { name: "Load demo week", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Payment run summary" })).toBeVisible();
+  await page.goto("/flagged?view=all");
   await expect(page.locator("tbody tr").first()).toBeVisible();
   let unavailable = true;
   await page.route("**/api/v1/payments/*/score", async (route) => {
@@ -42,22 +45,29 @@ test("invoice details recover from a failed fetch and ignore a closed request", 
 
   // A late response from a drawer that was closed must not replace the next invoice.
   const rows = page.locator("tbody tr");
-  const payee = await rows.nth(1).locator("td").nth(2).innerText();
+  const payee = await rows.nth(2).locator("td").nth(2).innerText();
   let releaseFirst!: () => void;
   const firstPending = new Promise<void>((resolve) => { releaseFirst = resolve; });
   let requests = 0;
+  let heldUrl = "";
   await page.unroute("**/api/v1/payments/*/score");
   await page.route("**/api/v1/payments/*/score", async (route) => {
     requests += 1;
-    if (requests === 1) await firstPending;
+    if (requests === 1) {
+      heldUrl = route.request().url();
+      await firstPending;
+    }
     await route.continue();
   });
-  await rows.first().click();
+  // Use an uncached invoice: reopening the first one correctly renders its cached result immediately.
+  await rows.nth(1).click();
   await expect(page.getByRole("dialog").getByRole("status")).toBeVisible();
   await page.keyboard.press("Escape");
-  await rows.nth(1).click();
+  await rows.nth(2).click();
   await expect(page.getByRole("dialog").getByText("Agent trace", { exact: true })).toBeVisible();
+  const lateResponse = page.waitForResponse((response) => response.url() === heldUrl);
   releaseFirst();
+  await lateResponse;
   await expect(page.getByRole("dialog")).toContainText(payee.trim().split("\n")[0]);
 });
 

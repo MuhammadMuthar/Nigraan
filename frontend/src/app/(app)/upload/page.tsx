@@ -83,17 +83,17 @@ export default function UploadPage() {
   return (
     <>
       <PageTitle title="Upload invoices" sub="The document reader extracts fields into a strict schema; deterministic checks set the confidence. The LLM never decides." />
-      <section aria-label="Document workflow" className="mb-5 grid gap-3 sm:grid-cols-3">
-        {[{ step: "01", title: "Read the document", text: "PDF text, OCR or Gemini extracts invoice fields." }, { step: "02", title: "Verify the fields", text: "Review confidence and deterministic validation checks." }, { step: "03", title: "Score the payment", text: "Risk engines decide; the document reader never sets a score." }].map((step) => <Card key={step.step} className="flex gap-3 p-4"><span className="text-xs font-semibold text-accent">{step.step}</span><div><h2 className="text-sm font-semibold">{step.title}</h2><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p></div></Card>)}
+      <section aria-label="Document workflow" className="stagger mb-5 grid gap-3 sm:grid-cols-3">
+        {[{ step: "01", title: "Read the document", text: "PDF text, OCR or Gemini extracts invoice fields." }, { step: "02", title: "Verify the fields", text: "Review confidence and deterministic validation checks." }, { step: "03", title: "Score the payment", text: "Risk engines decide; the document reader never sets a score." }].map((step) => <Card key={step.step} className="lift flex gap-3 p-4"><span className="text-xs font-semibold text-accent">{step.step}</span><div><h2 className="text-sm font-semibold">{step.title}</h2><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p></div></Card>)}
       </section>
       <div
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); Array.from(e.dataTransfer.files).forEach(handle); }}
-        className={cn("flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed bg-card px-6 py-10 text-center transition-colors",
-          drag ? "border-accent bg-accent-soft" : "border-border hover:border-accent/50")}
+        className={cn("group flex animate-rise-in cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed bg-card px-6 py-10 text-center transition-all duration-300 [animation-delay:120ms]",
+          drag ? "scale-[1.01] border-accent bg-accent-soft" : "border-border hover:border-accent/50")}
       >
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-accent-soft"><FileUp aria-hidden className="size-6 text-accent" /></div>
+        <div className={cn("flex size-14 items-center justify-center rounded-2xl bg-accent-soft transition-transform duration-300 group-hover:-translate-y-1", drag && "-translate-y-1.5 scale-110")}><FileUp aria-hidden className="size-6 text-accent" /></div>
         <div className="text-sm font-semibold">Drop invoice PDFs or images here</div>
         <div className="text-xs text-muted-foreground">PDF, PNG, JPG · up to 8 MB per file</div>
         <Button variant="outline" onClick={() => input.current?.click()}><FileUp />Choose invoice files</Button>
@@ -159,7 +159,7 @@ function UploadCard({ it, vendors, vendorError, onReloadVendors, onRescore, onUp
     }
   }
   return (
-    <Card className="overflow-hidden">
+    <Card className="animate-rise-in overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <FileText className="size-4 text-muted-foreground" />
         <div className="min-w-0 flex-1 truncate text-sm font-medium">{it.name}</div>
@@ -189,7 +189,7 @@ function UploadCard({ it, vendors, vendorError, onReloadVendors, onRescore, onUp
                       <div className={cn("truncate font-mono text-[13px]", v == null && "text-muted-foreground")}>{v == null ? "not found" : typeof v === "number" ? v.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : String(v)}</div>
                     )}
                     <div className="flex items-center gap-1">
-                      <div className="h-1.5 w-8 overflow-hidden rounded-full bg-muted"><div className={cn("h-full", low ? "bg-review" : "bg-allow")} style={{ width: `${c * 100}%` }} /></div>
+                      <div className="h-1.5 w-8 overflow-hidden rounded-full bg-muted"><div className={cn("grow-x h-full", low ? "bg-review" : "bg-allow")} style={{ width: `${c * 100}%` }} /></div>
                       <span className="tabular text-[11px] text-muted-foreground">{Math.round(c * 100)}%</span>
                     </div>
                   </div>
@@ -231,11 +231,11 @@ function UploadCard({ it, vendors, vendorError, onReloadVendors, onRescore, onUp
               </div>
             )}
             {it.score && (
-              <div className={cn("rounded-md border p-3", it.score.decision === "blocked" ? "border-blocked/30 bg-blocked-soft/60" : it.score.decision === "review" ? "border-review/30 bg-review-soft/60" : "border-allow/30 bg-allow-soft/60")}>
+              <div className={cn("animate-rise-in rounded-md border p-3", it.score.decision === "blocked" ? "border-blocked/30 bg-blocked-soft/60" : it.score.decision === "review" ? "border-review/30 bg-review-soft/60" : "border-allow/30 bg-allow-soft/60")}>
                 <div className="text-sm font-medium">{it.score.reasons.find((r) => r.engine !== "info" && !r.weak)?.text ?? "No significant risk signals"}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {it.score.case_id && <Button asChild size="sm" variant="danger"><Link href={`/cases/${it.score.case_id}`}>Open case<ArrowRight /></Link></Button>}
-                  <Button asChild size="sm" variant="outline"><Link href="/run">See it in the payment run</Link></Button>
+                  <Button asChild size="sm" variant="outline"><Link href={`/flagged?view=${it.score.decision === "allow" ? "all" : "flagged"}`}>See it in Flagged invoices</Link></Button>
                 </div>
               </div>
             )}

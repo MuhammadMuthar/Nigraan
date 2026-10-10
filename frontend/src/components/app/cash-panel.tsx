@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { day, dayFull, pct, rs, rsShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CashPanel as Panel, RunDetail } from "@/lib/types";
+import { LINE_CURSOR, TOOLTIP } from "@/components/app/chart-style";
 
 function Outcome({ title, sub, c, reserve, good }: { title: string; sub: string; c: Panel["with_nigraan"]; reserve: number; good: boolean }) {
   const ok = c.stays_above_reserve;
   return (
-    <div className={cn("flex-1 rounded-lg border p-4", ok ? "border-border bg-card" : "border-blocked/20 bg-blocked-soft/30")}>
+    <div className={cn("lift flex-1 rounded-lg border p-4", ok ? "border-border bg-card" : "border-blocked/20 bg-blocked-soft/30")}>
       <div className="flex items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-1.5 text-sm font-semibold">{good && <ShieldCheck className="size-4 text-accent" />}{title}</div>
@@ -49,7 +50,7 @@ export function CashPanel({ run }: { run: RunDetail }) {
   const t = run.totals;
   const chart = c.chart.map((d) => ({ ...d, label: day(d.day), with_nigraan: d.with_nigraan / 100, release_everything: d.release_everything / 100 }));
   return (
-    <Card className="overflow-hidden">
+    <Card className="animate-rise-in overflow-hidden [animation-delay:120ms]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
         <div>
           <div className="text-sm font-semibold">Cash impact of this run</div>
@@ -68,7 +69,7 @@ export function CashPanel({ run }: { run: RunDetail }) {
             <div className="tabular text-lg font-semibold">{rs(c.run_total)}</div>
             <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
               {(["allow", "review", "blocked"] as const).map((k) => (
-                <div key={k} className={k === "allow" ? "bg-allow" : k === "review" ? "bg-review" : "bg-blocked"}
+                <div key={k} className={cn("grow-x", k === "allow" ? "bg-allow" : k === "review" ? "bg-review" : "bg-blocked")}
                   style={{ width: `${(100 * t[k].amount) / Math.max(1, c.run_total)}%` }} />
               ))}
             </div>
@@ -90,10 +91,10 @@ export function CashPanel({ run }: { run: RunDetail }) {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={6} tickLine={false} axisLine={false} />
               <YAxis tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 10 }} width={54} tickLine={false} axisLine={false} />
-              <RTooltip formatter={(v, n) => [rs(Number(v) * 100), n === "with_nigraan" ? "With Nigraan" : "Release everything"]} labelStyle={{ fontSize: 12 }} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+              <RTooltip formatter={(v, n) => [rs(Number(v) * 100), n === "with_nigraan" ? "With Nigraan" : "Release everything"]} {...TOOLTIP} cursor={LINE_CURSOR} />
               <ReferenceLine y={c.reserve / 100} stroke="var(--blocked)" strokeDasharray="4 4" label={{ value: "Reserve", position: "insideTopRight", fontSize: 10, fill: "var(--blocked)" }} />
-              <Area type="stepAfter" dataKey="with_nigraan" stroke="var(--accent)" fill="var(--accent-soft)" strokeWidth={2} />
-              <Line type="stepAfter" dataKey="release_everything" stroke="var(--blocked)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} />
+              <Area type="stepAfter" dataKey="with_nigraan" stroke="var(--accent)" fill="var(--accent-soft)" strokeWidth={2} animationDuration={900} />
+              <Line type="stepAfter" dataKey="release_everything" stroke="var(--blocked)" strokeWidth={1.5} strokeDasharray="5 3" dot={false} animationDuration={900} animationBegin={250} />
             </ComposedChart>
           </ResponsiveContainer>
           <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground"><span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-accent" />With Nigraan</span><span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed border-blocked" />Release everything</span><span>Amounts in Rs · daily projection</span></div>

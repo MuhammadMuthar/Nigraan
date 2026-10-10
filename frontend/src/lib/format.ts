@@ -4,7 +4,7 @@ const IN = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
 export function rs(paisa: number | null | undefined): string {
   if (paisa === null || paisa === undefined) return "—";
   const rupees = Math.trunc(paisa / 100);
-  return `${rupees < 0 ? "-" : ""}Rs ${IN.format(Math.abs(rupees))}`;
+  return `${rupees < 0 ? "-" : ""}Rs\u00a0${IN.format(Math.abs(rupees))}`; // non-breaking: "Rs" never wraps away from the number
 }
 
 /** Short form for chart axes: Rs 14.3L, Rs 1.2Cr */

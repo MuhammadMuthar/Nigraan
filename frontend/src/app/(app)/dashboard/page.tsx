@@ -8,8 +8,9 @@ import { PageTitle } from "@/components/app/shell";
 import { FRAUD_NAMES } from "@/components/app/decision";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, Skeleton, Stat } from "@/components/ui/misc";
+import { CountUp, Empty, Skeleton, Stat } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
+import { BAR_CURSOR, TOOLTIP } from "@/components/app/chart-style";
 
 type M = { recall: number; precision_red: number; false_alarm_rate: number; pr_auc: number; rupees_protected_red?: number; rupees_fraud?: number };
 type Summary = {
@@ -43,9 +44,9 @@ export default function Dashboard() {
         <span className="flex items-center gap-2 font-medium"><ShieldAlert aria-hidden className="size-4 text-muted-foreground" />Synthetic demo · fictional company · no real-world performance claim</span>
         <span className="text-muted-foreground">Reporting month: {day(data.company.as_of, { day: undefined, month: "long", year: "numeric" })}</span>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-[#0B1422] bg-[#0B1422] text-white [&_.text-muted-foreground]:text-slate-300"><CardContent className="pt-5"><ShieldCheck aria-hidden className="mb-4 size-5 text-teal-300" /><Stat label="Rupees protected this month" value={rs(data.rupees_protected_this_month)} sub="blocked by Nigraan or rejected as fraud" /></CardContent></Card>
-        <Card><CardContent className="pt-5"><ShieldAlert aria-hidden className="mb-4 size-5 text-muted-foreground" /><Stat label="Open cases" value={data.open_cases.count} sub={`${rs(data.open_cases.amount)} on hold`} tone={data.open_cases.count ? "blocked" : undefined} />
+      <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="relative overflow-hidden border-[#0B1422] bg-gradient-to-br from-[#0B1422] via-[#0B1422] to-[#0f3b3a] text-white dark:border-accent/30 [&_.text-muted-foreground]:text-slate-300"><span aria-hidden className="absolute -right-10 -top-10 size-36 rounded-full bg-teal-400/10 blur-2xl" /><CardContent className="relative pt-5"><ShieldCheck aria-hidden className="mb-4 size-5 text-teal-300" /><Stat label="Rupees protected this month" value={<CountUp value={data.rupees_protected_this_month} format={rs} duration={1200} />} sub="blocked by Nigraan or rejected as fraud" /></CardContent></Card>
+        <Card><CardContent className="pt-5"><ShieldAlert aria-hidden className="mb-4 size-5 text-muted-foreground" /><Stat label="Open cases" value={<CountUp value={data.open_cases.count} />} sub={`${rs(data.open_cases.amount)} on hold`} tone={data.open_cases.count ? "blocked" : undefined} />
           <Link href="/cases" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Review cases<ArrowRight className="size-3" /></Link></CardContent></Card>
         <Card><CardContent className="pt-5"><Wallet aria-hidden className="mb-4 size-5 text-muted-foreground" />{data.cash ? <Stat label="Cash low point (13 weeks)" value={rs(data.cash.low_point)} sub={data.cash.first_breach ? `breaches reserve ${day(data.cash.first_breach)}` : `${day(data.cash.low_point_day)} · above the ${rs(data.cash.reserve)} reserve`} tone={data.cash.first_breach ? "blocked" : "allow"} /> : <Stat label="Cash low point (13 weeks)" value="—" sub="Cash projection unavailable" />}
           <Link href="/cash" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Explore cash outlook<ArrowRight className="size-3" /></Link>
@@ -53,7 +54,7 @@ export default function Dashboard() {
         <Card><CardContent className="pt-5"><LayoutDashboard aria-hidden className="mb-4 size-5 text-muted-foreground" />{data.run ? <Stat label="This week's run" value={`${data.run.total} lines`} sub={<span><span className="text-allow">{data.run.by_decision.allow} allow</span> · <span className="text-review">{data.run.by_decision.review} review</span> · <span className="text-blocked">{data.run.by_decision.blocked} blocked</span> · {data.run.pending} awaiting</span>} /> : <Stat label="This week's run" value="—" sub="load the demo week" />}<Link href="/run" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Open payment run<ArrowRight className="size-3" /></Link></CardContent></Card>
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+      <div className="stagger mt-5 grid gap-5 xl:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Alerts this month by fraud pattern</CardTitle><CardDescription>Review and blocked lines in this demo’s payment runs, by the engine&apos;s suspected pattern</CardDescription></CardHeader>
           <CardContent>
@@ -63,8 +64,8 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" tickFormatter={(v) => rsShort(v * 100)} tick={{ fontSize: 11 }} label={{ value: "Amount (Rs)", position: "insideBottom", offset: -10, fontSize: 11 }} />
                   <YAxis type="category" dataKey="label" width={130} tick={{ fontSize: 11 }} />
-                  <RTooltip formatter={(v) => rs(Number(v) * 100)} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                  <Bar dataKey="amountR" name="Amount" fill="var(--blocked)" radius={[0, 4, 4, 0]} />
+                  <RTooltip formatter={(v) => rs(Number(v) * 100)} {...TOOLTIP} cursor={BAR_CURSOR} />
+                  <Bar dataKey="amountR" name="Amount" fill="var(--blocked)" radius={[0, 4, 4, 0]} animationDuration={900} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -106,7 +107,7 @@ export default function Dashboard() {
       </div>
 
       {m && (
-        <div className="mt-5 grid gap-5 lg:grid-cols-3">
+        <div className="stagger mt-5 grid gap-5 lg:grid-cols-3">
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-1.5"><Wallet className="size-4 text-accent" />Late-payment model</CardTitle><CardDescription>Receivables issued in the test months, predicted at issue date</CardDescription></CardHeader>
             <CardContent className="grid gap-2 text-sm">

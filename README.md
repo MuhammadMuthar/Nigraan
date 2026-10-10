@@ -24,11 +24,11 @@ Before the weekly payment run, every vendor payment gets a green / yellow / red 
    - *With Nigraan*, cash stays above the Rs 50 lakh reserve for 13 weeks.
    - *If every line were released*, it breaches the reserve on Tue 13 Oct.
 
-   Below the panel: 7 red lines (locked, *View case*), a few yellow lines (second approver), and the rest green.
-4. Click a red line, then **View case**. The evidence depends on the pattern:
+   Below the panel, *Needs your attention* previews the riskiest lines.
+4. Open **Flagged invoices** in the left menu (the red badge counts lines awaiting a decision): 7 red lines (locked, *View case*) and a few yellow lines (second approver); the *Allow* and *All* filters show the green lines. Click a line for the evidence drawer, or **View case** on a red line. The evidence depends on the pattern:
    - duplicate invoices side by side;
    - the bank-change timeline;
-   - the vendor → phone → employee graph path;
+   - the vendor → phone → employee graph path (animated, labels never covered by lines);
    - SHAP reason bars, a guarded summary, the suggested verification step, and the full agent trace with timings.
 5. Sign out, sign in as **Haji Abdul Rashid (Owner)**. Then:
    - **Approve all green**;

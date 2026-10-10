@@ -7,21 +7,25 @@ import { cn } from "@/lib/utils";
 export const Sheet = D.Root;
 export const SheetTrigger = D.Trigger;
 
+const SIDE = {
+  right: "right-0 border-l data-[state=open]:animate-sheet-in-right data-[state=closed]:animate-sheet-out-right",
+  left: "left-0 border-r data-[state=open]:animate-sheet-in-left data-[state=closed]:animate-sheet-out-left",
+};
+
 export function SheetContent({ className, children, side = "right", ...props }: React.ComponentPropsWithoutRef<typeof D.Content> & { side?: "left" | "right" }) {
   return (
     <D.Portal>
-      <D.Overlay className="sheet-overlay fixed inset-0 z-50 bg-black/30" />
+      <D.Overlay className="fixed inset-0 z-50 bg-black/30 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in dark:bg-black/55" />
       <D.Content
-        data-side={side}
         className={cn(
-          "sheet-content fixed top-0 z-50 flex h-full w-full max-w-xl flex-col overflow-y-auto border-border bg-card shadow-2xl",
-          side === "left" ? "left-0 border-r" : "right-0 border-l",
+          "fixed top-0 z-50 flex h-full w-full max-w-xl flex-col overflow-y-auto border-border bg-card shadow-2xl",
+          SIDE[side],
           className,
         )}
         {...props}
       >
         {children}
-        <D.Close className="absolute right-4 top-4 rounded p-1 text-muted-foreground hover:bg-muted" aria-label="Close">
+        <D.Close className="absolute right-4 top-4 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Close">
           <X className="size-4" />
         </D.Close>
       </D.Content>

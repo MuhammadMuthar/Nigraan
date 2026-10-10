@@ -1,45 +1,28 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { CalendarPlus, CircleCheck, Download, Eye, Loader2, Lock, PauseCircle, ShieldAlert, UserCheck } from "lucide-react";
+import { ArrowRight, CalendarPlus, CircleCheck, Download, Flag, Loader2, ShieldAlert } from "lucide-react";
 import { api, getToken, API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useApi } from "@/lib/hooks";
-import { dateTime, dayFull, rs } from "@/lib/format";
-import type { RunDetail, RunLine } from "@/lib/types";
-import { PageTitle } from "@/components/app/shell";
+import { invalidateAll, useApi } from "@/lib/hooks";
+import { dayFull, rs } from "@/lib/format";
+import type { RunDetail } from "@/lib/types";
+import { flaggedOpen, PageTitle } from "@/components/app/shell";
 import { CashPanel } from "@/components/app/cash-panel";
-import { DecisionBadge, ENGINE_LABEL, FRAUD_NAMES, ScoreBar } from "@/components/app/decision";
-import { LineSheet } from "@/components/app/line-sheet";
+import { DecisionBadge, FRAUD_NAMES } from "@/components/app/decision";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/input";
-import { Empty, Skeleton, Stat } from "@/components/ui/misc";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CountUp, Empty, Skeleton, Stat } from "@/components/ui/misc";
 import { Tooltip } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-
-type Filter = "all" | "blocked" | "review" | "allow";
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Awaiting approval", approved: "Approved", blocked: "Locked", held: "Held", rejected: "Rejected (fraud)", released: "Settled", exported: "Exported · unsettled",
-};
 
 export default function RunPage() {
   const { user } = useAuth();
   const { data, loading, error, reload } = useApi<{ run: RunDetail | null }>("/payment-runs/current");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [sheet, setSheet] = useState<number | null>(null);
-  const [review, setReview] = useState<RunLine | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const run = data?.run ?? null;
   const canApprove = user?.role === "approver" || user?.role === "owner";
 
-  const lines = useMemo(() => (run ? run.lines.filter((l) => filter === "all" || l.decision === filter) : []), [run, filter]);
   const greenPending = run ? run.lines.filter((l) => l.decision === "allow" && l.status === "pending") : [];
 
   async function approveGreen() {
@@ -49,21 +32,6 @@ export default function RunPage() {
       const r = await api.post<{ approved: number[]; skipped: { vendor: string; reason: string }[] }>(`/payment-runs/${run.id}/approve-green`);
       toast.success(`Approved ${r.approved.length} green line(s).`);
       if (r.skipped.length) toast.warning(`${r.skipped.length} green line(s) are above the approval limit and need the owner: ${r.skipped.map((s) => s.vendor).join(", ")}`);
-      await reload();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function act(kind: "approve" | "hold", ids: number[], note?: string) {
-    if (!run) return;
-    setBusy(kind + ids.join(","));
-    try {
-      await api.post(`/payment-runs/${run.id}/${kind}`, { payment_ids: ids, note });
-      toast.success(kind === "approve" ? "Approved for payment." : "Line held.");
-      setReview(null);
       await reload();
     } catch (e) {
       toast.error((e as Error).message);
@@ -86,6 +54,7 @@ export default function RunPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Demo CSV exported. Payments remain unsettled and included in the cash forecast.");
+      invalidateAll();
       await reload();
     } catch (e) {
       toast.error((e as Error).message);
@@ -95,7 +64,7 @@ export default function RunPage() {
   }
 
   if (loading && !data) {
-    return <div className="grid gap-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-72" /><Skeleton className="h-96" /></div>;
+    return <div className="grid gap-4"><Skeleton className="h-8 w-64" /><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></div><Skeleton className="h-72" /><Skeleton className="h-64" /></div>;
   }
   if (error) return <Empty icon={<ShieldAlert />} title="Could not load the payment run"><p>{error.message}</p><Button variant="outline" className="mt-3" onClick={reload}>Retry</Button></Empty>;
   if (!run) {
@@ -132,123 +101,58 @@ export default function RunPage() {
       </PageTitle>
       <p className="mb-5 text-xs text-muted-foreground">Demo bank export contains account last four digits only. It does not send money or confirm settlement; exported payments remain forecast obligations.</p>
 
-      <section aria-label="Payment run summary" className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card><div className="p-5"><Stat label="Total payment lines" value={run.lines.length} sub={`${rs(run.cash.run_total)} scheduled`} /></div></Card>
-        <Card><div className="p-5"><Stat label="Action required" value={run.lines.filter((l) => l.status === "blocked" || (l.decision === "review" && l.status === "pending")).length} sub={`${run.totals.blocked.count} payments blocked · ${run.totals.review.count} to review`} /></div></Card>
-        <Card className="border-blocked/20"><div className="p-5"><Stat label="Blocked payment amount" value={rs(run.totals.blocked.amount)} sub="Resolve the cases before release" tone={run.totals.blocked.count ? "blocked" : undefined} /></div></Card>
+      <section aria-label="Payment run summary" className="stagger mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card><div className="p-5"><Stat label="Total payment lines" value={<CountUp value={run.lines.length} />} sub={`${rs(run.cash.run_total)} scheduled`} /></div></Card>
+        <Link href="/flagged" className="lift group block rounded-lg">
+          <Card className="h-full transition-colors group-hover:border-accent/40"><div className="p-5"><Stat label="Action required" value={<span className="inline-flex items-center gap-2"><CountUp value={flaggedOpen(run)} /><ArrowRight aria-hidden className="size-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-accent" /></span>} sub={`${run.totals.blocked.count} payments blocked · ${run.totals.review.count} to review`} /></div></Card>
+        </Link>
+        <Card className="border-blocked/20"><div className="p-5"><Stat label="Blocked payment amount" value={<CountUp value={run.totals.blocked.amount} format={rs} />} sub="Resolve the cases before release" tone={run.totals.blocked.count ? "blocked" : undefined} /></div></Card>
         <Card><div className="p-5"><Stat label="13-week reserve outcome" value={run.cash.with_nigraan.stays_above_reserve ? "Above reserve" : "Reserve breach"} sub={run.cash.with_nigraan.first_breach ? `First breach ${dayFull(run.cash.with_nigraan.first_breach)}` : `Minimum cash ${rs(run.cash.with_nigraan.low_point)}`} tone={run.cash.with_nigraan.stays_above_reserve ? "allow" : "blocked"} /></div></Card>
       </section>
       <CashPanel run={run} />
-
-      <Card className="mt-6 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="w-full text-base font-semibold">Payment decisions <span className="ml-2 text-xs font-normal text-muted-foreground">{lines.length} lines shown</span></div>
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-            <TabsList>
-              <TabsTrigger value="all">All {run.lines.length}</TabsTrigger>
-              <TabsTrigger value="blocked"><span className="size-2 rounded-full bg-blocked" />Blocked {run.lines.filter((l) => l.decision === "blocked").length}</TabsTrigger>
-              <TabsTrigger value="review"><span className="size-2 rounded-full bg-review" />Review {run.lines.filter((l) => l.decision === "review").length}</TabsTrigger>
-              <TabsTrigger value="allow"><span className="size-2 rounded-full bg-allow" />Allow {run.lines.filter((l) => l.decision === "allow").length}</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="text-xs text-muted-foreground">Click a line to see the evidence and the agent trace</div>
-        </div>
-        <Table aria-label="Payment decisions">
-          <THead>
-            <TR>
-              <TH>Verdict</TH><TH>Score</TH><TH>Payee</TH><TH className="text-right">Amount</TH><TH>Top reason</TH><TH>Entered by</TH><TH>Status</TH><TH className="text-right">Action</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {lines.map((l) => (
-              <TR key={l.id} className={cn("cursor-pointer hover:bg-muted/50", l.decision === "blocked" && "bg-blocked-soft/30")} onClick={() => setSheet(l.id)}>
-                <TD><DecisionBadge decision={l.decision} />{l.override && <div className="mt-1 text-[10px] text-review">overridden after case</div>}</TD>
-                <TD><ScoreBar score={l.score} /></TD>
-                <TD>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setSheet(l.id); }} aria-label={`Inspect ${l.vendor}, invoice ${l.invoice_no}`} className="text-left font-semibold hover:text-accent">{l.vendor}</button>
-                  <div className="text-xs text-muted-foreground">{l.invoice_no} · {l.bank_name} ••{l.bank_last4}{l.fraud_type && l.decision !== "allow" ? ` · ${FRAUD_NAMES[l.fraud_type]}` : ""}</div>
-                </TD>
-                <TD className="tabular whitespace-nowrap text-right font-medium">{rs(l.amount)}</TD>
-                <TD className="max-w-[360px]">
-                  <div className={cn("line-clamp-2 text-sm", l.decision === "allow" && "text-muted-foreground")}>{l.top_reason}</div>
-                  {l.info.length > 0 && <div className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{l.info[0]}</div>}
-                </TD>
-                <TD className="text-xs"><div>{l.created_by}</div><div className="text-muted-foreground">{dateTime(l.created_at)}</div></TD>
-                <TD className="text-xs">
-                  <span className={cn(l.status === "approved" && "text-allow", l.status === "blocked" && "text-blocked", l.status === "held" && "text-review")}>{STATUS_LABEL[l.status] ?? l.status}</span>
-                  {l.approved_by && <div className="text-muted-foreground">by {l.approved_by}</div>}
-                </TD>
-                <TD className="text-right" onClick={(e) => e.stopPropagation()}>
-                  <LineAction line={l} canApprove={canApprove} busy={busy} onApprove={() => act("approve", [l.id])} onReview={() => setReview(l)} />
-                </TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-        {lines.length === 0 && <div className="p-8 text-center text-sm text-muted-foreground">No lines match this verdict. Choose another filter.</div>}
-      </Card>
-
-      <ReviewDialog line={review} userId={user?.id} canApprove={canApprove} busy={!!busy}
-        onClose={() => setReview(null)} onApprove={(note) => review && act("approve", [review.id], note)} onHold={(note) => review && act("hold", [review.id], note)} />
-      <LineSheet paymentId={sheet} onClose={() => setSheet(null)} />
+      <AttentionCard run={run} />
     </>
   );
 }
 
-function LineAction({ line: l, canApprove, busy, onApprove, onReview }: {
-  line: RunLine; canApprove: boolean; busy: string | null; onApprove: () => void; onReview: () => void;
-}) {
-  if (l.decision === "blocked" && l.status === "blocked") {
-    return (
-      <div className="flex items-center justify-end gap-1.5">
-        <Tooltip content="Blocked by Nigraan: this line cannot be released. Resolve the case first.">
-          <span><Button size="sm" variant="outline" disabled aria-label="Release disabled"><Lock />Release</Button></span>
-        </Tooltip>
-        {l.case && <Button asChild size="sm" variant="danger"><Link href={`/cases/${l.case.id}`}><Eye />View case</Link></Button>}
+function AttentionCard({ run }: { run: RunDetail }) {
+  const flagged = run.lines
+    .filter((l) => l.decision === "blocked" || l.decision === "review")
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const open = flaggedOpen(run);
+  return (
+    <Card className="mt-6 animate-rise-in overflow-hidden [animation-delay:200ms]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div>
+          <div className="flex items-center gap-2 text-base font-semibold"><Flag aria-hidden className="size-4 text-blocked" />Needs your attention</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {open ? `${open} flagged line${open === 1 ? "" : "s"} awaiting a decision. Red lines stay locked until their case is resolved.` : "No flagged line is waiting on you."}
+          </div>
+        </div>
+        <Button asChild><Link href="/flagged">Review flagged invoices<ArrowRight /></Link></Button>
       </div>
-    );
-  }
-  if (l.status !== "pending") {
-    return l.case ? <Button asChild size="sm" variant="ghost"><Link href={`/cases/${l.case.id}`}>Case</Link></Button> : null;
-  }
-  if (l.decision === "review") {
-    return <Button size="sm" variant="outline" className="border-review/40 text-review hover:bg-review-soft" onClick={onReview}><UserCheck />Second approval</Button>;
-  }
-  return (
-    <Tooltip content={canApprove ? "Approve this line" : "Approver or owner role needed"}>
-      <span><Button size="sm" variant="outline" disabled={!canApprove || !!busy} onClick={onApprove}><CircleCheck />Approve</Button></span>
-    </Tooltip>
-  );
-}
-
-function ReviewDialog({ line, userId, canApprove, busy, onClose, onApprove, onHold }: {
-  line: RunLine | null; userId?: number; canApprove: boolean; busy: boolean; onClose: () => void; onApprove: (note: string) => void; onHold: (note: string) => void;
-}) {
-  const [note, setNote] = useState("");
-  const own = line && line.created_by_id === userId;
-  return (
-    <Dialog open={!!line} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        {line && (
-          <>
-            <DialogTitle>Second approval: {line.vendor}</DialogTitle>
-            <DialogDescription>{rs(line.amount)} · invoice {line.invoice_no} · entered by {line.created_by}. Yellow lines need a second person who did not enter them.</DialogDescription>
-            <div className="mt-4 grid gap-1.5">
-              {line.reasons.map((r, i) => (
-                <div key={i} className="flex gap-2 text-sm"><Badge variant="review" className="mt-0.5 shrink-0">{ENGINE_LABEL[r.engine] ?? r.engine}</Badge>{r.text}</div>
-              ))}
-              {line.info.map((t, i) => <div key={`i${i}`} className="text-xs text-muted-foreground">{t}</div>)}
-            </div>
-            {own && <div className="mt-4 rounded-md bg-review-soft px-3 py-2 text-sm text-review">You entered this line, so you cannot approve it. Ask another approver or the owner.</div>}
-            {!canApprove && <div className="mt-4 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">Only an approver or the owner can release payments.</div>}
-            <Textarea aria-label="Second approval note" className="mt-4" placeholder="Note (e.g. called vendor on registered number, confirmed new account)" value={note} onChange={(e) => setNote(e.target.value)} />
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" disabled={busy || !canApprove} onClick={() => onHold(note)}><PauseCircle />Hold</Button>
-              <Button variant="success" disabled={busy || !!own || !canApprove} onClick={() => onApprove(note)}><UserCheck />Approve as second approver</Button>
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+      {flagged.length === 0 ? (
+        <div className="flex items-center gap-2 px-5 py-6 text-sm text-muted-foreground"><CircleCheck className="size-4 text-allow" />Every line in this run was cleared by the engines.</div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {flagged.slice(0, 5).map((l, i) => (
+            <li key={l.id} className="row-in" style={{ "--i": i } as React.CSSProperties}>
+              <Link href={l.case ? `/cases/${l.case.id}` : "/flagged"} className="group flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 transition-colors hover:bg-muted/50">
+                <DecisionBadge decision={l.decision} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{l.vendor}<span className="ml-2 text-xs font-normal text-muted-foreground">{l.invoice_no}{l.fraud_type ? ` · ${FRAUD_NAMES[l.fraud_type]}` : ""}</span></span>
+                  <span className="block truncate text-xs text-muted-foreground">{l.top_reason}</span>
+                </span>
+                <span className="tabular text-sm font-medium">{rs(l.amount)}</span>
+                <ArrowRight aria-hidden className="size-4 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-accent" />
+              </Link>
+            </li>
+          ))}
+          {flagged.length > 5 && (
+            <li><Link href="/flagged" className="block px-5 py-3 text-center text-xs font-medium text-accent hover:underline">+ {flagged.length - 5} more flagged line{flagged.length - 5 === 1 ? "" : "s"}</Link></li>
+          )}
+        </ul>
+      )}
+    </Card>
   );
 }

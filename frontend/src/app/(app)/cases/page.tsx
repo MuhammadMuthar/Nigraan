@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { useApi } from "@/lib/hooks";
@@ -23,6 +24,7 @@ const STATUS: Record<string, { label: string; variant: "blocked" | "allow" | "de
 };
 
 export default function CasesPage() {
+  const router = useRouter();
   const [tab, setTab] = useState("auto");
   const [retrying, setRetrying] = useState(false);
   const path = tab === "auto" ? "/cases?source=auto" : tab === "open" ? "/cases?status=open" : "/cases?source=historical";
@@ -41,7 +43,7 @@ export default function CasesPage() {
           <TabsTrigger value="historical">Historical audit (pre-Nigraan)</TabsTrigger>
         </TabsList>
       </Tabs>
-      <Card className="mt-4">
+      <Card className="mt-4 animate-rise-in overflow-hidden [animation-delay:80ms]">
         {error ? (
           <div className="p-4" role="alert"><Empty icon={<ShieldAlert />} title="Cases unavailable"><p>{error.message}</p><Button variant="outline" className="mt-3" onClick={retry} disabled={retrying}>{retrying ? <Loader2 className="animate-spin" /> : <RefreshCw />}Retry cases</Button></Empty></div>
         ) : loading && !data ? <div className="p-4"><Skeleton className="h-40" /></div> : !data || data.length === 0 ? (
@@ -49,9 +51,9 @@ export default function CasesPage() {
         ) : (
           <Table>
             <THead><TR><TH>Case</TH><TH>Status</TH><TH>Score</TH><TH>Vendor</TH><TH>Suspected pattern</TH><TH className="text-right">Amount</TH><TH>Top reason</TH><TH>Opened</TH></TR></THead>
-            <TBody>
-              {data.map((c) => (
-                <TR key={c.id} className="hover:bg-muted/50">
+            <TBody key={tab}>
+              {data.map((c, i) => (
+                <TR key={c.id} className="row-in cursor-pointer hover:bg-muted/50" style={{ "--i": i } as React.CSSProperties} onClick={() => router.push(`/cases/${c.id}`)}>
                   <TD><Link href={`/cases/${c.id}`} className="font-medium text-accent hover:underline">#{c.id}</Link></TD>
                   <TD><Badge variant={STATUS[c.status]?.variant}>{STATUS[c.status]?.label ?? c.status}</Badge></TD>
                   <TD><ScoreBar score={c.score} /></TD>

@@ -11,7 +11,7 @@ export function TabsTrigger({ className, ...props }: React.ComponentPropsWithout
   return (
     <T.Trigger
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm [&_svg]:size-3.5",
+        "inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm [&_svg]:size-3.5",
         className,
       )}
       {...props}
@@ -19,5 +19,5 @@ export function TabsTrigger({ className, ...props }: React.ComponentPropsWithout
   );
 }
 export function TabsContent({ className, ...props }: React.ComponentPropsWithoutRef<typeof T.Content>) {
-  return <T.Content className={cn("mt-4 focus-visible:outline-none", className)} {...props} />;
+  return <T.Content className={cn("mt-4 focus-visible:outline-none data-[state=active]:animate-fade-in", className)} {...props} />;
 }
